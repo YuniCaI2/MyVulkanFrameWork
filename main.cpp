@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include<GLFW/glfw3.h>
 #include "Core/Instance.h"
+#include "Core/physicalDevice.h"
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
 #else
@@ -15,6 +16,9 @@ class MyVulkan {
 public:
     GLFWwindow* window;
     VK::Instance instance{enableValidationLayers};
+    VK::PhysicalDevice physicalDevice{instance.instance};
+
+
 
 
 public:

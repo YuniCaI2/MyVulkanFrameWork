@@ -3,24 +3,31 @@
 //
 
 #include "physicalDevice.h"
+#include <vector>
+#include <stdexcept>
 
-void VK::PhysicalDevice::pickPhysicalDevice(const vk::Instance &instance) {
+void VK::PhysicalDevice::pickPhysicalDevice(const VkInstance& instance) {
     uint32_t deviceCount = 0;
-    std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
-    deviceCount = static_cast<uint32_t>(physicalDevices.size());
-    if (deviceCount == 0) {
-        throw std::runtime_error("failed to enumerate physical devices");
+    // 第一次调用获取设备数量
+    if (vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr) != VK_SUCCESS || deviceCount == 0) {
+        throw std::runtime_error("Failed to enumerate physical devices");
     }
-    for (const auto &device : physicalDevices) {
+
+    // 第二次调用获取设备列表
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    if (vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data()) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get physical devices");
+    }
+
+    // 寻找合适设备
+    for (const auto& device : devices) {
         if (isDeviceSuitable(device)) {
             m_physicalDevice = device;
-            break;
+            return;
         }
     }
-    if (m_physicalDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("failed to create physical device");
-        exit(-1);
-    }
+
+    throw std::runtime_error("Failed to find a suitable GPU");
 }
 
 VK::PhysicalDevice VK::PhysicalDevice::setDeviceExtension(const char* extension) {
@@ -28,18 +35,26 @@ VK::PhysicalDevice VK::PhysicalDevice::setDeviceExtension(const char* extension)
     return *this;
 }
 
-bool VK::PhysicalDevice::isDeviceSuitable(const vk::PhysicalDevice &physicalDevice) {
-    vk::PhysicalDeviceProperties physicalDeviceProperties = physicalDevice.getProperties();
-    vk::PhysicalDeviceFeatures physicalDeviceFeatures = physicalDevice.getFeatures();
+bool VK::PhysicalDevice::isDeviceSuitable(const VkPhysicalDevice& physicalDevice) {
+    // 获取设备属性
+    VkPhysicalDeviceProperties deviceProperties{};
+    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
-    return physicalDeviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu &&
-        physicalDeviceFeatures.geometryShader;
+    // 获取设备特性
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+
+    // 检查设备类型和几何着色器支持
+    return (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
+           (deviceFeatures.geometryShader);
 }
 
-vk::PhysicalDevice VK::PhysicalDevice::Device() const {
+VkPhysicalDevice VK::PhysicalDevice::Device() const {
     return m_physicalDevice;
 }
 
-VK::PhysicalDevice::PhysicalDevice(const vk::Instance &instance) {
+VK::PhysicalDevice::PhysicalDevice(const VkInstance& instance)
+    : m_physicalDevice(VK_NULL_HANDLE)  // 显式初始化成员变量
+{
     pickPhysicalDevice(instance);
 }

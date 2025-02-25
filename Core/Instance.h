@@ -1,20 +1,20 @@
 ﻿//
 // Created by 51092 on 25-2-23.
 //
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 
 #ifndef INSTANCE_H
 #define INSTANCE_H
-#include <vulkan/vulkan_raii.hpp>
+#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 namespace VK {
     class Instance {
     public:
         Instance(bool enable);
-        vk::Instance instance;
-        vk::DebugUtilsMessengerEXT debugMessenger;
+        VkInstance instance;
+        VkDebugUtilsMessengerEXT debugMessenger;
         bool enableValidationLayers;
-        vk::detail::DispatchLoaderDynamic dispatchLoaderInstance;
         std::vector<const char*> validationLayers = {
             "VK_LAYER_KHRONOS_validation"
         };
@@ -22,7 +22,7 @@ namespace VK {
         [[nodiscard]] std::vector<const char *> getRequiredExtensions() const;
 
         void createInstance();
-        void populateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateInfoEXT& createInfo);
+        void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         void setupDebugMessenger();
         void DestroyDebugUtils() const;
         void DestroyInstance() const;

@@ -10,15 +10,15 @@
 namespace VK {
     class PhysicalDevice {
     public:
-        vk::PhysicalDevice m_physicalDevice;
+        VkPhysicalDevice m_physicalDevice;
         std::vector<const char*> m_deviceExtensions;
     public:
         PhysicalDevice setDeviceExtension(const char * extension);
-        vk::PhysicalDevice Device() const;
-        PhysicalDevice(const vk::Instance& instance);
+        VkPhysicalDevice Device() const;
+        PhysicalDevice(const VkInstance& instance);
     private:
-        bool isDeviceSuitable(const vk::PhysicalDevice& physicalDevice);
-        void pickPhysicalDevice(const vk::Instance& instance);
+        bool isDeviceSuitable(const VkPhysicalDevice& physicalDevice);
+        void pickPhysicalDevice(const VkInstance& instance);
     };
 }
 
