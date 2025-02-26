@@ -3,6 +3,8 @@
 //
 
 #include "physicalDevice.h"
+
+#include <iostream>
 #include <vector>
 #include <stdexcept>
 
@@ -28,7 +30,7 @@ void VK::PhysicalDevice::pickPhysicalDevice(const VkInstance& instance) {
     }
 
     throw std::runtime_error("Failed to find a suitable GPU");
-}
+t }
 
 VK::PhysicalDevice VK::PhysicalDevice::setDeviceExtension(const char* extension) {
     m_deviceExtensions.push_back(extension);
@@ -50,11 +52,11 @@ bool VK::PhysicalDevice::isDeviceSuitable(const VkPhysicalDevice& physicalDevice
 }
 
 VkPhysicalDevice VK::PhysicalDevice::Device() const {
+    std::cout << m_physicalDevice;
     return m_physicalDevice;
 }
 
-VK::PhysicalDevice::PhysicalDevice(const VkInstance& instance)
-    : m_physicalDevice(VK_NULL_HANDLE)  // 显式初始化成员变量
+void VK::PhysicalDevice::createPhysicalDevice(const VkInstance& instance)
 {
     pickPhysicalDevice(instance);
 }

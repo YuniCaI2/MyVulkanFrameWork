@@ -6,7 +6,11 @@
 #include <iostream>
 #include <cstring>
 
-VK::Instance::Instance(bool enable) {
+std::vector<const char*> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+};
+
+void VK::Instance::createInstance(bool enable) {
     enableValidationLayers = enable;
     createInstance();
     setupDebugMessenger();
