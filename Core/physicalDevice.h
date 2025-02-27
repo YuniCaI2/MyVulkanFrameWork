@@ -4,7 +4,7 @@
 
 #ifndef PHYSICALDEVICE_H
 #define PHYSICALDEVICE_H
-#include "Device.h"
+#include "Instance.h"
 
 
 namespace VK {
@@ -15,7 +15,7 @@ namespace VK {
     public:
         PhysicalDevice setDeviceExtension(const char * extension);
         VkPhysicalDevice Device() const;
-        PhysicalDevice(const VkInstance& instance);
+        void createPhysicalDevice(const VkInstance& instance);
     private:
         bool isDeviceSuitable(const VkPhysicalDevice& physicalDevice);
         void pickPhysicalDevice(const VkInstance& instance);

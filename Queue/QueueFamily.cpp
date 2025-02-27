@@ -4,7 +4,7 @@
 
 namespace VK {
 
-QueueFamily::QueueFamily(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+void QueueFamily::createQueueFamily(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     queryQueueFamilies(physicalDevice, surface);
 }

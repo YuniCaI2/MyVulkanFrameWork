@@ -16,7 +16,7 @@ namespace VK {
         std::optional<uint32_t> computeFamily;
         std::optional<uint32_t> transferFamily;
 
-        explicit QueueFamily(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface = VK_NULL_HANDLE);
+         void createQueueFamily(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface = VK_NULL_HANDLE);
 
         // 检查必要队列是否存在
         bool isComplete() const;

@@ -1,29 +1,39 @@
-﻿//
-// Created by 51092 on 25-2-23.
-//
-
-#ifndef DEVICE_H
+﻿#ifndef DEVICE_H
 #define DEVICE_H
-#include <vulkan/vulkan_raii.hpp>
 
-#if defined(_WIN32) || defined(_WIN64)
-const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-};
-#elif defined(__APPLE__) && defined(__MACH__)
-const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    "VK_KHR_portability_subset"
-};
-#endif
+#include <map>
+#include <vulkan/vulkan_raii.hpp>
+#include <optional>
+#include "../Queue/QueueFamily.h"    // 确保 QueueFamily 在 VK 命名空间
+#include "../Core/physicalDevice.h"  // 确保 PhysicalDevice 在 VK 命名空间
+
+
 
 namespace VK {
     class Device {
     public:
+        VkDevice device{};
+        VkQueue graphicsQueue{};
+        VkQueue presentQueue{};
+        VkQueue transferQueue{};
+        VkQueue computeQueue{};
+        uint32_t graphicsQueueFamilyIndex{};
+        uint32_t presentQueueFamilyIndex{};
+        uint32_t transferQueueFamilyIndex{};
+        uint32_t computeQueueFamilyIndex{};
 
+
+        std::map<uint32_t, std::vector<VkQueue>> queueFamiliesMap;
+
+        void Destroy();
+
+        void createDevice(const QueueFamily& queueFamily, const PhysicalDevice& physicalDevice, bool enableValidationLayer);
+        static bool checkDeviceExtensionSupport(const VkPhysicalDevice& physicalDevice);
+
+    private:
+        std::vector<uint32_t> queueFamilies;
+        void loadQueueFamilyIndices(const QueueFamily& queueFamily);
     };
-
 }
 
-
-#endif //DEVICE_H
+#endif // DEVICE_H
