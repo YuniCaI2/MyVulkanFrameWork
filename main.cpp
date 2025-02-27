@@ -11,7 +11,6 @@
 const bool enableValidationLayers = true;
 #endif
 
-
 class MyVulkan {
 public:
     GLFWwindow* window;
