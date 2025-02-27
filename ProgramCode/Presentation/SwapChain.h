@@ -21,6 +21,10 @@ namespace VK {
         VkExtent2D extent;
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
+        void setRasterizerState();
+        void setMultisampleState();
+        void setDepthStencilState();
+        void setColorBlendState();
         void createSwapChain(VkPhysicalDevice physicalDevice, const VK::Device& device,GLFWwindow* window, VkSurfaceKHR surface);
 
         static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
