@@ -84,11 +84,11 @@ querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
 }
 
 void VK::SwapChain::DestroySwapChain() const{
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
     for (uint32_t i = 0; i < swapChainImages.size(); i++) {
         vkDestroyImageView(device, swapChainImageViews[i], nullptr);
         vkDestroyImage(device, swapChainImages[i], nullptr);
     }
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
 }
 
 VkSurfaceFormatKHR VK::SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats) {

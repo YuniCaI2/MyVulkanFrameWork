@@ -4,7 +4,7 @@
 
 #include "utils.h"
 #include <stdexcept>
-
+#include <fstream>
 
 VkImageView Utils::createImageView(VkDevice device,VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) {
         VkImageViewCreateInfo viewInfo{};
@@ -26,4 +26,18 @@ VkImageView Utils::createImageView(VkDevice device,VkImage image, VkFormat forma
             throw std::runtime_error("failed to create image view!");
         }
         return imageView;
+}
+
+std::vector<char> Utils::readFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+                    //第一个参数的含义是从文件末尾读取，第二个参数是将文件读取为二进制文件
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+    size_t fileSize = (size_t) file.tellg();
+    std::vector<char> buffer(fileSize);
+    file.seekg(0);//将光标移到首位
+    file.read(buffer.data(), static_cast<uint32_t>(fileSize));
+    file.close();
+    return buffer;
 }
