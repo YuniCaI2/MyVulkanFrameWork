@@ -4,25 +4,32 @@
 
 #ifndef PIPELINE_H
 #define PIPELINE_H
+#include <vector>
 #include <vulkan/vulkan_core.h>
+#include <string>
+#include "./Shader.h"
+#include "../Presentation/SwapChain.h"
 
+enum class ShaderStage {
+    VERT,
+    FRAG,
+};
 
 namespace VK::Render {
         class Pipeline {
         public:
             VkPipeline m_pipeline;
-
-            void bindVertex();
-
-
-            void createPipeline(VkDevice device);
+            void createPipeline(VkDevice device, const SwapChain& swapChain);
+            Pipeline setShader(const std::string& path, ShaderStage stage);
         private:
-            VkShaderModule vertexShader;
-            VkShaderModule fragmentShader;
+            VkDevice device{};
+            VK::SwapChain swapChain{};
+            std::vector<Shader> shaders;
+            std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+            VkPipelineDynamicStateCreateInfo dynamicState{};
+            VkPipelineVertexInputStateCreateInfo vertexInput{};
 
-
-            static VkShaderModule createShaderModule(VkDevice device, const char *pShaderFile);
-
+            static VkPipelineDynamicStateCreateInfo setDynamicState();
         };
     }
 

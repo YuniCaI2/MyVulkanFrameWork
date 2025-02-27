@@ -21,6 +21,8 @@ void VK::SwapChain::createSwapChain(VkPhysicalDevice physicalDevice, const VK::D
     createInfo.surface = surface;
     createInfo.minImageCount = imageCount;
     createInfo.pNext = nullptr;
+    this -> extent.width = extent.width;
+    this -> extent.height = extent.height;
     createInfo.imageExtent = extent;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.presentMode = presentMode;

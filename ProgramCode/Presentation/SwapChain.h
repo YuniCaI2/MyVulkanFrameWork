@@ -18,6 +18,7 @@ namespace VK {
     public:
         VkSwapchainKHR swapChain;
         VkDevice device;
+        VkExtent2D extent;
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
         void createSwapChain(VkPhysicalDevice physicalDevice, const VK::Device& device,GLFWwindow* window, VkSurfaceKHR surface);
