@@ -8,6 +8,14 @@
 #include <vector>
 #include <stdexcept>
 
+#if defined(_WIN32) || defined(_WIN64)
+constexpr VkPhysicalDeviceType physicalDeviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+#elif defined(__APPLE__) && defined(__MACH__)
+constexpr  VkPhysicalDeviceType physicalDeviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
+#endif
+
+
+
 void VK::PhysicalDevice::pickPhysicalDevice(const VkInstance& instance) {
     uint32_t deviceCount = 0;
     // 第一次调用获取设备数量
@@ -46,9 +54,14 @@ bool VK::PhysicalDevice::isDeviceSuitable(const VkPhysicalDevice& physicalDevice
     VkPhysicalDeviceFeatures deviceFeatures{};
     vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
+#if defined(_WIN32) || defined(_WIN64)
+    return (deviceProperties.deviceType == physicalDeviceType) &&
+       (deviceFeatures.geometryShader);
+#elif defined(__APPLE__) && defined(__MACH__)
+    return (deviceProperties.deviceType == physicalDeviceType);
+#endif
     // 检查设备类型和几何着色器支持
-    return (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
-           (deviceFeatures.geometryShader);
+
 }
 
 VkPhysicalDevice VK::PhysicalDevice::Device() const {

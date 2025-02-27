@@ -22,7 +22,14 @@ std::vector<const char *> VK::Instance::getRequiredExtensions() const {
     std::vector<const char *> extensions(glfwExtension, glfwExtension + glfwExtensionCount);
     if (enableValidationLayers)
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+    #if defined(_WIN32) || defined(_WIN64)
+    #elif defined(__APPLE__) && defined(__MACH__)
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    #endif
+
     return extensions;
+
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -70,6 +77,13 @@ void VK::Instance::createInstance() {
     auto extensions = getRequiredExtensions();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
+
+    #if defined(_WIN32) || defined(_WIN64)
+    #elif defined(__APPLE__) && defined(__MACH__)
+    createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    #endif
+
+
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     if (enableValidationLayers) {
