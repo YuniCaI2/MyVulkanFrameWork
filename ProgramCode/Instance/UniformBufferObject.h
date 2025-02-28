@@ -4,7 +4,7 @@
 
 #ifndef UNIFORMBUFFEROBJECT_H
 #define UNIFORMBUFFEROBJECT_H
-#include <glm\glm.hpp>
+#include <glm/glm.hpp>
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;

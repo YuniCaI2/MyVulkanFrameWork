@@ -4,8 +4,6 @@
 
 #ifndef SHADER_H
 #define SHADER_H
-#include "Pipeline.h"
-#include <string>
 
 #include "../Core/Device.h"
 
