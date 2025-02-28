@@ -5,7 +5,6 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-
 #include "../Core/Device.h"
 
 namespace VK::Render {
