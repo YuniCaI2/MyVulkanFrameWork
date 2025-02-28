@@ -18,9 +18,34 @@ enum class ShaderStage {
 namespace VK::Render {
         class Pipeline {
         public:
-            VkPipeline m_pipeline;
-            void createPipeline(VkDevice device, const SwapChain& swapChain);
+            VkPipeline m_pipeline{};
+            VkPipelineLayout m_pipelineLayout{};
+            void createPipeline(VkDevice device, const SwapChain& swapChain,
+                const VkDescriptorSetLayout& descriptorSetLayout,
+                const VkRenderPass& renderPass);
             Pipeline setShader(const std::string& path, ShaderStage stage);
+            Pipeline setRasterizerState(
+                const VkBool32& rasterizerDiscardEnable = VK_FALSE,
+                const VkPolygonMode& polygonMode = VK_POLYGON_MODE_FILL,
+                const VkCullModeFlags& cullMode = VK_CULL_MODE_BACK_BIT,
+                const VkFrontFace& frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+
+                const float& lineWidth = 1.0f,
+                const VkBool32& depthBiasEnable = VK_FALSE,
+                const float& depthBiasConstantFactor = 0.0f,
+                const float& depthBiasClamp = 0.0f,
+                const float& depthBiasSlopeFactor = 0.0f,
+                const VkBool32& depthClampEnable = VK_FALSE
+                );
+            Pipeline setMultisampleState(
+            const VkSampleCountFlagBits& sampleCount = VK_SAMPLE_COUNT_1_BIT,
+            const VkBool32& sampleShadingEnable = VK_FALSE, const float& minSampleShading = 1.0f,
+            const VkSampleMask* pSamplerMask = nullptr,
+            const VkBool32& alphaToCoverageEnable = VK_FALSE,
+            const VkBool32& alphaToOneEnable = VK_FALSE
+            );
+            Pipeline setDepthStencilState();
+            Pipeline setColorBlendState();
         private:
             VkDevice device{};
             VK::SwapChain swapChain{};
@@ -28,6 +53,12 @@ namespace VK::Render {
             std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
             VkPipelineDynamicStateCreateInfo dynamicState{};
             VkPipelineVertexInputStateCreateInfo vertexInput{};
+
+            VkPipelineRasterizationStateCreateInfo rasterizerInfo{};//光栅
+            VkPipelineMultisampleStateCreateInfo multisamplingInfo{};//多重采样
+            VkPipelineColorBlendAttachmentState colorBlendAttachmentInfo{};
+            VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo{};
+            VkPipelineDepthStencilStateCreateInfo depthStencilInfo{};
 
             static VkPipelineDynamicStateCreateInfo setDynamicState();
         };

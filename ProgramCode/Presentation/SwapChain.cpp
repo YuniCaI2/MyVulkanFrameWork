@@ -4,19 +4,6 @@
 
 #include "SwapChain.h"
 #include "../Utils/utils.h"
-
-void VK::SwapChain::setRasterizerState() {
-}
-
-void VK::SwapChain::setMultisampleState() {
-}
-
-void VK::SwapChain::setDepthStencilState() {
-}
-
-void VK::SwapChain::setColorBlendState() {
-}
-
 void VK::SwapChain::createImageViews(VkFormat swapchainFormat) {
     swapChainImageViews.resize(swapChainImages.size());
     for(size_t i = 0; i < swapChainImages.size(); i++) {
@@ -116,7 +103,7 @@ void VK::SwapChain::DestroySwapChain() const{
 
 VkSurfaceFormatKHR VK::SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats) {
     for (const auto &availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8_SRGB &&
+        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
             availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return availableFormat;
         }

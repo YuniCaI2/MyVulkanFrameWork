@@ -6,11 +6,11 @@
 #include "../Utils/utils.h"
 #include "../Instance/Vertex.h"
 
-void VK::Render::Pipeline::createPipeline(VkDevice device, const SwapChain& swapChain) {
+void VK::Render::Pipeline::createPipeline(VkDevice device, const SwapChain& swapChain,
+    const VkDescriptorSetLayout& descriptorSetLayout, const VkRenderPass& renderPass) {
     this->device = device;
     this->swapChain = swapChain;
     VkPipelineDynamicStateCreateInfo dynamicState = setDynamicState();
-
     //设置顶点布局
     auto bindingDescription = Vertex::getBindingDescription();
     auto attributeDescription = Vertex::getAttributeDescriptions();
@@ -48,6 +48,40 @@ void VK::Render::Pipeline::createPipeline(VkDevice device, const SwapChain& swap
     viewportState.viewportCount = 1;
     viewportState.scissorCount = 1;
 
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;//先不使用常量推送
+    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = shaderStages.size();
+    pipelineInfo.pStages = shaderStages.data();
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizerInfo;
+    pipelineInfo.pMultisampleState = &multisamplingInfo;
+    pipelineInfo.pDepthStencilState = &depthStencilInfo;
+    pipelineInfo.pColorBlendState = &colorBlendStateCreateInfo;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = m_pipelineLayout;
+    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;//没有派生管线
+
+    if(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!");
+    }
+
+
 
     for (const auto& shader : shaders) {
         shader.DestroyShaderModule();
@@ -70,6 +104,93 @@ VK::Render::Pipeline VK::Render::Pipeline::setShader(const std::string& path, Sh
     else {
         throw std::runtime_error("Invalid shader stage");
     }
+}
+
+VK::Render::Pipeline VK::Render::Pipeline::setRasterizerState(const VkBool32 &rasterizerDiscardEnable,
+    const VkPolygonMode &polygonMode, const VkCullModeFlags &cullMode, const VkFrontFace &frontFace,
+    const float &lineWidth, const VkBool32 &depthBiasEnable, const float &depthBiasConstantFactor,
+    const float &depthBiasClamp, const float &depthBiasSlopeFactor, const VkBool32 &depthClampEnable) {
+    rasterizerInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizerInfo.depthClampEnable = depthClampEnable;
+    rasterizerInfo.rasterizerDiscardEnable = rasterizerDiscardEnable;
+    rasterizerInfo.polygonMode = polygonMode;
+    rasterizerInfo.cullMode = cullMode;
+    rasterizerInfo.frontFace = frontFace;
+    rasterizerInfo.depthBiasEnable = depthBiasEnable;
+    rasterizerInfo.depthBiasConstantFactor = depthBiasConstantFactor;
+    rasterizerInfo.depthBiasClamp = depthBiasClamp;
+    rasterizerInfo.depthBiasSlopeFactor = depthBiasSlopeFactor;
+    rasterizerInfo.lineWidth = lineWidth;
+    return *this;
+}
+
+VK::Render::Pipeline VK::Render::Pipeline::setMultisampleState(const VkSampleCountFlagBits &sampleCount,
+    const VkBool32 &sampleShadingEnable, const float &minSampleShading, const VkSampleMask *pSamplerMask,
+    const VkBool32 &alphaToCoverageEnable, const VkBool32 &alphaToOneEnable) {
+    multisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisamplingInfo.sampleShadingEnable = sampleShadingEnable;
+    multisamplingInfo.rasterizationSamples = sampleCount;
+    multisamplingInfo.alphaToCoverageEnable = alphaToCoverageEnable;
+    multisamplingInfo.alphaToOneEnable = alphaToOneEnable;
+    multisamplingInfo.pSampleMask = pSamplerMask;
+    multisamplingInfo.minSampleShading = minSampleShading;
+    return *this;
+}
+
+VK::Render::Pipeline VK::Render::Pipeline::setDepthStencilState() {
+    VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
+    depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencilState.depthTestEnable = VK_TRUE;
+    depthStencilState.depthWriteEnable = VK_TRUE;
+    depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
+    //这里设置更近的保留
+    depthStencilState.depthBoundsTestEnable = VK_FALSE;
+    depthStencilState.minDepthBounds = 0.0f;
+    depthStencilState.maxDepthBounds = 1.0f;
+    //深度范围
+    depthStencilState.stencilTestEnable = VK_FALSE;
+    //不使用模版缓冲
+    depthStencilState.front = {};
+    depthStencilState.back = {};
+    //关于模版缓冲的一些设置
+
+    depthStencilInfo = depthStencilState;
+
+    return *this;
+
+
+}
+
+VK::Render::Pipeline VK::Render::Pipeline::setColorBlendState() {
+    //2025.02.28 中此处设置默认不调用
+    //颜色混合
+    VkPipelineColorBlendAttachmentState  colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    //这里设置保留所有分量
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentInfo = colorBlendAttachment;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachmentInfo;
+    colorBlending.blendConstants[0] = 0.0f;
+    colorBlending.blendConstants[1] = 0.0f;
+    colorBlending.blendConstants[2] = 0.0f;
+    colorBlending.blendConstants[3] = 0.0f;
+
+    colorBlendStateCreateInfo = colorBlending;
+    return *this;
+
+
 }
 
 VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState(){
