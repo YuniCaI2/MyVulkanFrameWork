@@ -11,7 +11,6 @@
 namespace Utils {
     VkImageView createImageView(VkDevice device,VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
      uint32_t mipLevels);
-
     std::vector<char> readFile(const std::string& filename);
 }
 #endif //UTILS_H

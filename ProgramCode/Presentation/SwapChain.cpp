@@ -4,6 +4,13 @@
 
 #include "SwapChain.h"
 #include "../Utils/utils.h"
+void VK::SwapChain::createImageViews(VkFormat swapchainFormat) {
+    swapChainImageViews.resize(swapChainImages.size());
+    for(size_t i = 0; i < swapChainImages.size(); i++) {
+        swapChainImageViews[i] = Utils::createImageView(device, swapChainImages[i], swapchainFormat,
+            VK_IMAGE_ASPECT_COLOR_BIT,1);
+    }
+}
 
 void VK::SwapChain::createSwapChain(VkPhysicalDevice physicalDevice, const VK::Device& device,GLFWwindow *window, VkSurfaceKHR surface) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
@@ -58,7 +65,7 @@ void VK::SwapChain::createSwapChain(VkPhysicalDevice physicalDevice, const VK::D
     vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, swapChainImages.data());
-    createImageViews();
+    createImageViews(surfaceFormat.format);
 }
 
 VK::SwapChainSupportDetails VK::SwapChain::
@@ -90,14 +97,13 @@ querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
 void VK::SwapChain::DestroySwapChain() const{
     for (size_t i = 0; i < swapChainImages.size(); i++) {
         vkDestroyImageView(device, swapChainImageViews[i], nullptr);
-        vkDestroyImage(device, swapChainImages[i], nullptr);
     }
     vkDestroySwapchainKHR(device, swapChain, nullptr);
 }
 
 VkSurfaceFormatKHR VK::SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats) {
     for (const auto &availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_R8G8B8A8_SRGB &&
+        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
             availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return availableFormat;
         }
@@ -132,10 +138,3 @@ VkExtent2D VK::SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capab
     }
 }
 
-void VK::SwapChain::createImageViews() {
-    swapChainImageViews.resize(swapChainImages.size());
-    for(size_t i = 0; i < swapChainImages.size(); i++) {
-        swapChainImageViews[i] = Utils::createImageView(device, swapChainImages[i], VK_FORMAT_R8G8B8A8_SRGB,
-            VK_IMAGE_ASPECT_COLOR_BIT,1);
-    }
-}

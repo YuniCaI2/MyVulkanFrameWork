@@ -21,10 +21,6 @@ namespace VK {
         VkExtent2D extent;
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
-        void setRasterizerState();
-        void setMultisampleState();
-        void setDepthStencilState();
-        void setColorBlendState();
         void createSwapChain(VkPhysicalDevice physicalDevice, const VK::Device& device,GLFWwindow* window, VkSurfaceKHR surface);
 
         static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -33,7 +29,7 @@ namespace VK {
         static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
         static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
         static VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
-        void createImageViews();
+        void createImageViews(VkFormat swapChainFormat);
     };
 }
 
