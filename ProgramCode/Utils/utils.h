@@ -11,6 +11,9 @@
 namespace Utils {
     VkImageView createImageView(VkDevice device,VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
      uint32_t mipLevels);
-     std::vector<char> readFile(const std::string& filename);
+    std::vector<char> readFile(const std::string& filename);
+    VkFormat findSupportedFormat(const VkPhysicalDevice& physicalDevice,const std::vector<VkFormat>& candidates,
+    VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkFormat findDepthFormat(const VkPhysicalDevice& physicalDevice);
 }
 #endif //UTILS_H
