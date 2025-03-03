@@ -13,7 +13,7 @@ namespace VK {
         VkPhysicalDevice m_physicalDevice;
         std::vector<const char*> m_deviceExtensions;
     public:
-        PhysicalDevice setDeviceExtension(const char * extension);
+        PhysicalDevice& setDeviceExtension(const char * extension);
         VkPhysicalDevice Device() const;
         void createPhysicalDevice(const VkInstance& instance);
     private:

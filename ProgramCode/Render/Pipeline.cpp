@@ -88,7 +88,7 @@ void VK::Render::Pipeline::createPipeline(VkDevice device, const SwapChain& swap
     }
 }
 
-VK::Render::Pipeline VK::Render::Pipeline::setShader(const std::string& path, ShaderStage stage) {
+VK::Render::Pipeline& VK::Render::Pipeline::setShader(const std::string& path, ShaderStage stage) {
     if (stage == ShaderStage::VERT) {
         Shader shader{device, path, VK_SHADER_STAGE_VERTEX_BIT};
         shaders.emplace_back(shader);
@@ -106,7 +106,7 @@ VK::Render::Pipeline VK::Render::Pipeline::setShader(const std::string& path, Sh
     }
 }
 
-VK::Render::Pipeline VK::Render::Pipeline::setRasterizerState(const VkBool32 &rasterizerDiscardEnable,
+VK::Render::Pipeline& VK::Render::Pipeline::setRasterizerState(const VkBool32 &rasterizerDiscardEnable,
     const VkPolygonMode &polygonMode, const VkCullModeFlags &cullMode, const VkFrontFace &frontFace,
     const float &lineWidth, const VkBool32 &depthBiasEnable, const float &depthBiasConstantFactor,
     const float &depthBiasClamp, const float &depthBiasSlopeFactor, const VkBool32 &depthClampEnable) {
@@ -124,7 +124,7 @@ VK::Render::Pipeline VK::Render::Pipeline::setRasterizerState(const VkBool32 &ra
     return *this;
 }
 
-VK::Render::Pipeline VK::Render::Pipeline::setMultisampleState(const VkSampleCountFlagBits &sampleCount,
+VK::Render::Pipeline& VK::Render::Pipeline::setMultisampleState(const VkSampleCountFlagBits &sampleCount,
     const VkBool32 &sampleShadingEnable, const float &minSampleShading, const VkSampleMask *pSamplerMask,
     const VkBool32 &alphaToCoverageEnable, const VkBool32 &alphaToOneEnable) {
     multisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -137,7 +137,7 @@ VK::Render::Pipeline VK::Render::Pipeline::setMultisampleState(const VkSampleCou
     return *this;
 }
 
-VK::Render::Pipeline VK::Render::Pipeline::setDepthStencilState() {
+VK::Render::Pipeline& VK::Render::Pipeline::setDepthStencilState() {
     VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
     depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencilState.depthTestEnable = VK_TRUE;
@@ -161,7 +161,7 @@ VK::Render::Pipeline VK::Render::Pipeline::setDepthStencilState() {
 
 }
 
-VK::Render::Pipeline VK::Render::Pipeline::setColorBlendState() {
+VK::Render::Pipeline& VK::Render::Pipeline::setColorBlendState() {
     //2025.02.28 中此处设置默认不调用
     //颜色混合
     VkPipelineColorBlendAttachmentState  colorBlendAttachment = {};
@@ -191,6 +191,11 @@ VK::Render::Pipeline VK::Render::Pipeline::setColorBlendState() {
     return *this;
 
 
+}
+
+void VK::Render::Pipeline::Destroy() {
+    vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
+    vkDestroyPipeline(device, m_pipeline, nullptr);
 }
 
 VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState(){

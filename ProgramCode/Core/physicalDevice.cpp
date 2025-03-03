@@ -40,7 +40,7 @@ void VK::PhysicalDevice::pickPhysicalDevice(const VkInstance& instance) {
     throw std::runtime_error("Failed to find a suitable GPU");
 }
 
-VK::PhysicalDevice VK::PhysicalDevice::setDeviceExtension(const char* extension) {
+VK::PhysicalDevice& VK::PhysicalDevice::setDeviceExtension(const char* extension) {
     m_deviceExtensions.push_back(extension);
     return *this;
 }
