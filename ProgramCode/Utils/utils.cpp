@@ -42,7 +42,7 @@ std::vector<char> Utils::readFile(const std::string& filename) {
     return buffer;
 }
 
-VkFormat findSupportedFormat(const VkPhysicalDevice& physicalDevice,const std::vector<VkFormat>& candidates,
+VkFormat Utils::findSupportedFormat(const VkPhysicalDevice& physicalDevice,const std::vector<VkFormat>& candidates,
 VkImageTiling tiling, VkFormatFeatureFlags features) {
     for (VkFormat format : candidates) {
         VkFormatProperties props;//这玩意支持三个字段
@@ -56,7 +56,7 @@ VkImageTiling tiling, VkFormatFeatureFlags features) {
     throw std::runtime_error("failed to find supporting format!");
 }
 
-VkFormat findDepthFormat(const VkPhysicalDevice& physicalDevice) {
+VkFormat Utils::findDepthFormat(const VkPhysicalDevice& physicalDevice) {
     return findSupportedFormat(physicalDevice,
             {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
                 VK_FORMAT_D24_UNORM_S8_UINT

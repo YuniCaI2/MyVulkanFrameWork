@@ -6,7 +6,6 @@
 #define RENDERPASS_H
 #include <vulkan/vulkan_core.h>
 #include <vector>
-#include <vulkan/vulkan_structs.hpp>
 
 namespace VK::Render {
     class RenderPass {
@@ -17,6 +16,7 @@ namespace VK::Render {
         void setSubpassDescription(const VkSubpassDescription& subpassDescription);
         void createRenderPass(const VkPhysicalDevice& physicalDeivce,const VkDevice& device, const VkFormat& format);
         void setSubpassDependency(const VkSubpassDependency& subpassDependency);
+        void DestroyRenderPass() const;
     private:
         std::vector<VkAttachmentDescription> attachments;
         std::vector<VkAttachmentReference> attachmentReferences;
