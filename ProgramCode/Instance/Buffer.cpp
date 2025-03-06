@@ -7,7 +7,7 @@
 void VK::Instances::Buffer::createBuffer(const VK::Device &device, const VkDeviceSize &size,
     const VkBufferUsageFlags &usage, const VkMemoryPropertyFlags &properties) {
     this->device = device;
-
+    this->size = size;
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
@@ -31,4 +31,27 @@ void VK::Instances::Buffer::createBuffer(const VK::Device &device, const VkDevic
     }
 
     vkBindBufferMemory(device.device, buffer, memory, 0);
+}
+
+void VK::Instances::Buffer::Map() {
+    vkMapMemory(device.device, memory, 0, size, 0,&data);
+}
+
+void VK::Instances::Buffer::UnMap() const {
+    vkUnmapMemory(device.device, memory);
+}
+
+void VK::Instances::Buffer::destroyBuffer() const {
+    vkDestroyBuffer(device.device, buffer, nullptr);
+    vkFreeMemory(device.device, memory, nullptr);
+}
+
+void VK::Instances::Buffer::copy(VkBuffer dstBuffer, VkCommandPool commandPool) const{
+    VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(device, commandPool);
+    VkBufferCopy copyRegion = {};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, buffer, dstBuffer, 1, &copyRegion);
+    Utils::endSingleTimeCommands(device, commandPool, commandBuffer);
 }

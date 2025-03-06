@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
-
+#include "../Core/Device.h"
 namespace Utils {
     VkImageView createImageView(VkDevice device,VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
      uint32_t mipLevels);
@@ -16,5 +16,9 @@ namespace Utils {
     VkImageTiling tiling, VkFormatFeatureFlags features);
     VkFormat findDepthFormat(const VkPhysicalDevice& physicalDevice);
     uint32_t findMemoryType(const VkPhysicalDevice& physicalDevice,uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    VkCommandBuffer beginSingleTimeCommands(const VK::Device& device,const VkCommandPool& commandPool);
+    void endSingleTimeCommands(const VK::Device& device,const VkCommandPool& commandPool,VkCommandBuffer commandBuffer);
+    void transitionImageLayout(const VK::Device& device, const VkCommandPool& commandPool,VkImage image, VkFormat format, VkImageLayout oldLayout,
+        VkImageLayout newLayout, uint32_t mipLevels);
 }
 #endif //UTILS_H

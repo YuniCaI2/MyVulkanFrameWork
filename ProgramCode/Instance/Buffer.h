@@ -16,9 +16,12 @@ namespace VK::Instances {
         void* data{nullptr};
         void createBuffer(const VK::Device& device,const VkDeviceSize& size,
             const VkBufferUsageFlags& usage, const VkMemoryPropertyFlags& properties);
-        void Map() const;
+        void Map();
         void UnMap() const;
+        void destroyBuffer() const;
+        void copy(VkBuffer dstBuffer, VkCommandPool commandPool) const;
     private:
+        VkDeviceSize size{};
         VK::Device device{};
     };
 }
