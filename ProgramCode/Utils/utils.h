@@ -15,5 +15,6 @@ namespace Utils {
     VkFormat findSupportedFormat(const VkPhysicalDevice& physicalDevice,const std::vector<VkFormat>& candidates,
     VkImageTiling tiling, VkFormatFeatureFlags features);
     VkFormat findDepthFormat(const VkPhysicalDevice& physicalDevice);
+    uint32_t findMemoryType(const VkPhysicalDevice& physicalDevice,uint32_t typeFilter, VkMemoryPropertyFlags properties);
 }
 #endif //UTILS_H

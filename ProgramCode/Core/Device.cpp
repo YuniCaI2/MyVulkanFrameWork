@@ -23,6 +23,7 @@ void VK::Device::Destroy() {
 void VK::Device::createDevice(const VK::QueueFamily &queueFamily,
                    const VK::PhysicalDevice& physicalDevice,
                    bool enableValidationLayers) {
+    this->physicalDevice = physicalDevice.Device();
     loadQueueFamilyIndices(queueFamily);
     float queuePriority = 1.0f;
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;

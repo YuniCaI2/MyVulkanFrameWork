@@ -22,6 +22,7 @@ namespace VK {
         uint32_t transferQueueFamilyIndex{};
         uint32_t computeQueueFamilyIndex{};
 
+        VkPhysicalDevice physicalDevice{};
 
         std::map<uint32_t, std::vector<VkQueue>> queueFamiliesMap;
 
