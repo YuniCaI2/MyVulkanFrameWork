@@ -6,30 +6,30 @@
 #include "UniformBufferObject.h"
 #include <stdexcept>
 
-void VK::Instance::DescriptorManager::initialManager(VkDevice device) {
+void VK::Instances::DescriptorManager::initialManager(VkDevice device) {
     this->device = device;
     createSetLayouts();
     textureImageViews.clear();
     uniformBuffers.clear();
 }
 
-void VK::Instance::DescriptorManager::setUniformBuffer(const VkBuffer &buffer) {
+void VK::Instances::DescriptorManager::setUniformBuffer(const VkBuffer &buffer) {
     uniformBuffers.push_back(buffer);
 }
 
-void VK::Instance::DescriptorManager::setSampler(const VkSampler &sampler) {
+void VK::Instances::DescriptorManager::setSampler(const VkSampler &sampler) {
     this->textureSampler = sampler;
 }
 
-void VK::Instance::DescriptorManager::setImageView(const VkImageView &imageView) {
+void VK::Instances::DescriptorManager::setImageView(const VkImageView &imageView) {
     textureImageViews.push_back(imageView);
 }
 
-void VK::Instance::DescriptorManager::setMaxSets(const uint32_t &maxSets) {
+void VK::Instances::DescriptorManager::setMaxSets(const uint32_t &maxSets) {
     this->maxSets = maxSets;
 }
 
-void VK::Instance::DescriptorManager::createSets() {
+void VK::Instances::DescriptorManager::createSets() {
     createPool();
     //uniformSets
     if (! uniformDescriptorSets.empty()) {
@@ -92,7 +92,7 @@ void VK::Instance::DescriptorManager::createSets() {
     }
 }
 
-void VK::Instance::DescriptorManager::createSetLayouts() {
+void VK::Instances::DescriptorManager::createSetLayouts() {
     VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
     samplerLayoutBinding.binding = 0;
     samplerLayoutBinding.descriptorCount = 1;//这里代表资源的数量
@@ -130,7 +130,7 @@ void VK::Instance::DescriptorManager::createSetLayouts() {
 
 
 
-void VK::Instance::DescriptorManager::createPool() {
+void VK::Instances::DescriptorManager::createPool() {
     uniformDescriptorSets.resize(uniformBuffers.size());
     textureDescriptorSets.resize(textureImageViews.size());
 

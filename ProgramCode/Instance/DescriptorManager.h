@@ -7,7 +7,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-namespace VK::Instance {
+namespace VK::Instances {
     class DescriptorManager {
     public:
         void initialManager(VkDevice device);

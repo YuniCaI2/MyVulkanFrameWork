@@ -8,6 +8,7 @@
 #include <vulkan/vulkan_core.h>
 #include <string>
 #include "./Shader.h"
+#include "../Instance/DescriptorManager.h"
 #include "../Presentation/SwapChain.h"
 
 enum class ShaderStage {
@@ -18,10 +19,11 @@ enum class ShaderStage {
 namespace VK::Render {
         class Pipeline {
         public:
+            Pipeline& initial(const VkDevice& device);
             VkPipeline m_pipeline{};
             VkPipelineLayout m_pipelineLayout{};
-            void createPipeline(VkDevice device, const SwapChain& swapChain,
-                const VkDescriptorSetLayout& descriptorSetLayout,
+            void createPipeline( const SwapChain& swapChain,
+                const Instances::DescriptorManager& descriptorManager,
                 const VkRenderPass& renderPass);
             Pipeline& setShader(const std::string& path, ShaderStage stage);
             Pipeline& setRasterizerState(

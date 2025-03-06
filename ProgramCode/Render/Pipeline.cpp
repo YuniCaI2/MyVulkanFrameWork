@@ -6,9 +6,18 @@
 #include "../Utils/utils.h"
 #include "../Instance/Vertex.h"
 
-void VK::Render::Pipeline::createPipeline(VkDevice device, const SwapChain& swapChain,
-    const VkDescriptorSetLayout& descriptorSetLayout, const VkRenderPass& renderPass) {
+std::vector<VkDynamicState> dynamicStates = {
+    VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_SCISSOR
+};
+
+VK::Render::Pipeline & VK::Render::Pipeline::initial(const VkDevice& device) {
     this->device = device;
+    return *this;
+}
+
+void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
+                                          const Instances::DescriptorManager& descriptorManager, const VkRenderPass& renderPass) {
     this->swapChain = swapChain;
     VkPipelineDynamicStateCreateInfo dynamicState = setDynamicState();
     //设置顶点布局
@@ -48,12 +57,18 @@ void VK::Render::Pipeline::createPipeline(VkDevice device, const SwapChain& swap
     viewportState.viewportCount = 1;
     viewportState.scissorCount = 1;
 
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {descriptorManager.uniformDescriptorSetLayout,
+        descriptorManager.textureDescriptorSetLayout};
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
+    // pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
     pipelineLayoutInfo.pushConstantRangeCount = 0;//先不使用常量推送
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    // pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+    pipelineLayoutInfo.setLayoutCount = 0;
+    pipelineLayoutInfo.pSetLayouts = nullptr;
+
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
@@ -199,10 +214,6 @@ void VK::Render::Pipeline::Destroy() {
 }
 
 VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState(){
-    std::vector<VkDynamicState> dynamicStates = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());

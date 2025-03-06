@@ -8,6 +8,10 @@
 #include "Queue/QueueFamily.h"
 #include "Core/Device.h"
 #include "Presentation/SwapChain.h"
+#include "Render/Pipeline.h"
+#include "Render/RenderPass.h"
+#include "Instance/DescriptorManager.h"
+#include "Render/FrameBuffers.h"
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
 #else
@@ -24,6 +28,10 @@ public:
     VK::QueueFamily queueFamilies{};
     VK::Device device{};
     VK::SwapChain swapChain{};
+    VK::Render::RenderPass renderPass{};
+    VK::Render::Pipeline pipeline{};
+    VK::Instances::DescriptorManager descriptorManager{};
+    VK::Render::FrameBuffers frameBuffers{};
 
 
 
@@ -35,6 +43,9 @@ public:
         cleanup();
     }
     void cleanup() {
+        frameBuffers.destroyFrameBuffers();
+        pipeline.Destroy();
+        renderPass.DestroyRenderPass();
         swapChain.DestroySwapChain();
         surface.DestroySurface();
         device.Destroy();
@@ -51,6 +62,16 @@ public:
         queueFamilies.createQueueFamily(physicalDevice.m_physicalDevice, surface.m_surface);
         device.createDevice(queueFamilies, physicalDevice, enableValidationLayers);
         swapChain.createSwapChain(physicalDevice.Device(),device, window, surface.m_surface);
+        renderPass.createRenderPass(physicalDevice.Device(), device.device, swapChain.format);
+        pipeline.initial(device.device).
+        setShader("D:/学习/cpp_program/Vulkan/Shaders/spv/vert.spv",ShaderStage::VERT)
+        .setShader("D:/学习/cpp_program/Vulkan/Shaders/spv/frag.spv",ShaderStage::FRAG)
+        .setRasterizerState()
+        .setMultisampleState()
+        .setColorBlendState().setDepthStencilState()
+        .createPipeline( swapChain,descriptorManager
+            , renderPass.m_renderPass );
+        frameBuffers.createFrameBuffers(device, renderPass, swapChain);
     }
     void createWindow() {
         glfwInit();

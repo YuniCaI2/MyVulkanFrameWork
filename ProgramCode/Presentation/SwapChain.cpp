@@ -15,6 +15,7 @@ void VK::SwapChain::createImageViews(VkFormat swapchainFormat) {
 void VK::SwapChain::createSwapChain(VkPhysicalDevice physicalDevice, const VK::Device& device,GLFWwindow *window, VkSurfaceKHR surface) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+    this->format = surfaceFormat.format;
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
