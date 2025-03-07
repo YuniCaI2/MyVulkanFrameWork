@@ -118,4 +118,12 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
     }
 }
 
+void VK::Instances::Model::destroy() const {
+    for (auto & mesh : meshes) {
+        mesh.indexBuffer.buffer.destroyBuffer();
+        mesh.vertexBuffer.buffer.destroyBuffer();
+        mesh.texture.image.destroyImage();
+    }
+}
+
 

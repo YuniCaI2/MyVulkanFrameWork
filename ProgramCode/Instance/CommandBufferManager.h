@@ -15,11 +15,11 @@ namespace VK::Instances {
     class CommandBufferManager {
     public:
         std::vector<VkCommandBuffer> commandBuffers;
+        VkCommandPool commandPool{};
         void createCommandBuffers(const VK::Device& device, const VK::QueueFamily& queueFamily, uint32_t size);
         void destroyCommandBuffers() const;
     private:
         VkDevice device{};
-        VkCommandPool commandPool{};
         void createCommandPool(const VK::QueueFamily& queueFamily);
     };
 }

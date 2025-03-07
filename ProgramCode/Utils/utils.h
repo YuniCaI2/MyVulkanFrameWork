@@ -20,5 +20,6 @@ namespace Utils {
     void endSingleTimeCommands(const VK::Device& device,const VkCommandPool& commandPool,VkCommandBuffer commandBuffer);
     void transitionImageLayout(const VK::Device& device, const VkCommandPool& commandPool,VkImage image, VkFormat format, VkImageLayout oldLayout,
         VkImageLayout newLayout, uint32_t mipLevels);
+
 }
 #endif //UTILS_H

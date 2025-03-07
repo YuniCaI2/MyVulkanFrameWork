@@ -3,15 +3,17 @@
 //
 
 #include "FrameBuffers.h"
+#include <vector>
 
 void VK::Render::FrameBuffers::createFrameBuffers(const VK::Device &device, const RenderPass &renderPass,
-    const VK::SwapChain &swapChain) {
+    const VK::SwapChain &swapChain, const std::vector<VkImageView>& depthBuffer) {
     m_Device = device.device;
     frameBuffers.resize(swapChain.swapChainImageViews.size());
 
     for (uint32_t i = 0; i < swapChain.swapChainImageViews.size(); i++) {
         VkImageView attachments[] = {
             swapChain.swapChainImageViews[i],
+            depthBuffer[i]
         };
         VkFramebufferCreateInfo framebufferInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -25,7 +27,6 @@ void VK::Render::FrameBuffers::createFrameBuffers(const VK::Device &device, cons
         if(vkCreateFramebuffer(device.device, &framebufferInfo, nullptr, &frameBuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create framebuffer");
         }
-
     }
 }
 

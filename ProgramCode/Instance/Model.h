@@ -40,6 +40,7 @@ namespace VK::Instances {
         void createModelVertexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelIndexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelTextureImage(const VK::Device& device, const VkCommandPool& commandPool);
+        void destroy() const;
     };
 }
 

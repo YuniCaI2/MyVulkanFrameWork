@@ -14,7 +14,7 @@ namespace VK::Render {
     class FrameBuffers {
     public:
         std::vector<VkFramebuffer> frameBuffers;
-        void createFrameBuffers(const VK::Device& device, const RenderPass& renderPass, const VK::SwapChain& swapChain);
+        void createFrameBuffers(const VK::Device& device, const RenderPass& renderPass, const VK::SwapChain& swapChain, const std::vector<VkImageView>& depthBuffers);
         void destroyFrameBuffers() const;
 
     private:

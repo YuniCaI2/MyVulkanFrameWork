@@ -92,6 +92,10 @@ void VK::Instances::DescriptorManager::createSets() {
     }
 }
 
+void VK::Instances::DescriptorManager::destroy() const {
+    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+}
+
 void VK::Instances::DescriptorManager::createSetLayouts() {
     VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
     samplerLayoutBinding.binding = 0;

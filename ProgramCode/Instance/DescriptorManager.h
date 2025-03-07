@@ -16,6 +16,7 @@ namespace VK::Instances {
         void setImageView(const VkImageView& imageView);
         void setMaxSets(const uint32_t& maxSets);
         void createSets();
+        void destroy() const;
 
         VkDevice device{};
         VkDescriptorPool descriptorPool{};
