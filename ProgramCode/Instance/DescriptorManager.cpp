@@ -93,6 +93,8 @@ void VK::Instances::DescriptorManager::createSets() {
 }
 
 void VK::Instances::DescriptorManager::destroy() const {
+    vkDestroyDescriptorSetLayout(device, uniformDescriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, textureDescriptorSetLayout, nullptr);
     vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 }
 
@@ -124,7 +126,7 @@ void VK::Instances::DescriptorManager::createSetLayouts() {
 
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &samplerLayoutBinding;
+    layoutInfo.pBindings = &uboLayoutBinding;
     if(vkCreateDescriptorSetLayout(device, &layoutInfo,
         nullptr, &uniformDescriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create uniform descriptor set layout!");

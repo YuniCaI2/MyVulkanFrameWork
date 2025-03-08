@@ -52,6 +52,6 @@ void VK::Instances::Buffer::copy(VkBuffer dstBuffer, VkCommandPool commandPool) 
     copyRegion.srcOffset = 0;
     copyRegion.dstOffset = 0;
     copyRegion.size = size;
-    vkCmdCopyBuffer(commandBuffer, buffer, dstBuffer, 1, &copyRegion);
+    vkCmdCopyBuffer(commandBuffer,  dstBuffer,buffer, 1, &copyRegion);
     Utils::endSingleTimeCommands(device, commandPool, commandBuffer);
 }

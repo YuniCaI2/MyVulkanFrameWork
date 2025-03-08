@@ -1,5 +1,4 @@
-﻿#include <iostream>
-#include <vulkan/vulkan.hpp>
+﻿#include <vulkan/vulkan.hpp>
 #include<opencv2/opencv.hpp>
 #include<GLFW/glfw3.h>
 #include "Core/Instance.h"
@@ -18,7 +17,6 @@
 #include "Instance/UniformBufferObject.h"
 #include "Instance/VertexBuffer.h"
 #include "Render/FrameBuffers.h"
-#include "Instance/UniformBufferObject.h"
 #include "Camera.h"
 
 constexpr int MAX_FRAMES_IN_FLIGHT = 2;
@@ -51,6 +49,11 @@ public:
 
 private:
     uint32_t currentFrame{0};
+
+    //视角移动变量
+    bool firstMouse{true};
+    float lastX{};
+    float lastY{};
     Camera myCamera{};
 public:
 
@@ -102,15 +105,15 @@ public:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipeline.m_pipelineLayout, 0, 1,
         &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
+        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera);
         for (auto i = 0; i < model.meshes.size(); i++) {
             VkBuffer vertexBuffers[] = {model.meshes[i].vertexBuffer.buffer.buffer};
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(commandBuffer, model.meshes[i].indexBuffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
             //加载模型中的顶点
-            VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera);
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline.m_pipelineLayout, 0, 1,
+                pipeline.m_pipelineLayout, 1, 1,
                 &descriptorManager.textureDescriptorSets[i], 0, nullptr);
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model.meshes[i].indices.size()), 1, 0, 0, 0);
             //后面的参数用来对齐索引和顶点
@@ -130,6 +133,72 @@ public:
     }
 
     void drawFrame() {
+        vkWaitForFences(device.device, 1, &syncManager.Fences[currentFrame],
+            VK_TRUE, UINT64_MAX);//后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
+        uint32_t imageIndex;
+        VkResult result = vkAcquireNextImageKHR(device.device, swapChain.swapChain,
+            UINT64_MAX, syncManager.Semaphores[currentFrame * 2],
+            VK_NULL_HANDLE, &imageIndex);
+
+        if (result ==  VK_ERROR_OUT_OF_DATE_KHR ) {
+            // recreateSwapChain();
+            return;
+        }
+        else if (result !=  VK_SUBOPTIMAL_KHR && result != VK_SUCCESS) {
+            throw std::runtime_error("failed to acquire swap chain image!");
+        }
+        vkResetFences(device.device, 1, &syncManager.Fences[currentFrame]); //手动设置为无信号
+
+        //这里是以纳秒为单位的
+        vkResetCommandBuffer(commandBufferManager.commandBuffers[currentFrame], 0);
+        recordCommandBuffer(commandBufferManager.commandBuffers[currentFrame], imageIndex);//这里来记录我们想要的命令,录制命令
+        //有了完整的命令，之后就要提交它
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkSemaphore waitSemaphore[] = { syncManager.Semaphores[currentFrame * 2]};
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = waitSemaphore;
+        submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBufferManager.commandBuffers[currentFrame];
+        VkSemaphore signalSemaphores[] = {syncManager.Semaphores[currentFrame * 2 + 1]};
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalSemaphores;
+        if (vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, syncManager.Fences[currentFrame]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit command buffer command buffer submission!");
+        }
+        //当命令缓冲区完成时将发出信号
+
+        VkPresentInfoKHR presentInfo = {};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = signalSemaphores;
+        //等待信号量实现后，再进行执行
+
+        VkSwapchainKHR swapChains[] = {swapChain.swapChain};
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapChains;
+        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pResults = nullptr;
+        /*它允许您指定VkResult值数组来检查每个单独的交换链是否呈现成功。
+         如果您只使用单个交换链，则没有必要，因为您可以简单地使用当前函数的返回值。
+         */
+        result = vkQueuePresentKHR(device.presentQueue, &presentInfo);
+
+        // if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        //     //交换链已经与表面不兼容，无法再用于渲染。通常与窗口大小发生调整有关。
+        //     //交换链仍然可以成功呈现到表面，但是表面属性不再完全匹配
+        //     recreateSwapChain();
+        //     framebufferResized = false;
+        // } else
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to present swap chain image!");
+        }
+
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     }
 
@@ -141,11 +210,11 @@ public:
     }
 
     void cleanup() {
+        model.destroy();
         syncManager.destroySyncObjects();
         for (auto i = 0; i < uniformBuffers.size(); i++) {
             uniformBuffers[i].buffer.destroyBuffer();
         }
-        model.destroy();
         commandBufferManager.destroyCommandBuffers();
         depthResource.destroyDepthResources();
         descriptorManager.destroy();
@@ -169,20 +238,12 @@ public:
         device.createDevice(queueFamilies, physicalDevice, enableValidationLayers);
         swapChain.createSwapChain(physicalDevice.Device(),device, window, surface.m_surface);
         renderPass.createRenderPass(physicalDevice.Device(), device.device, swapChain.format);
-        pipeline.initial(device.device).
-        setShader("D:/学习/cpp_program/Vulkan/Shaders/spv/vert.spv",ShaderStage::VERT)
-        .setShader("D:/学习/cpp_program/Vulkan/Shaders/spv/frag.spv",ShaderStage::FRAG)
-        .setRasterizerState()
-        .setMultisampleState()
-        .setColorBlendState().setDepthStencilState()
-        .createPipeline( swapChain,descriptorManager
-            , renderPass.m_renderPass );
         depthResource.createDepthResources(device,swapChain.extent,swapChain.swapChainImages.size());
         frameBuffers.createFrameBuffers(device, renderPass, swapChain, depthResource.getImageViews());
 
-        commandBufferManager.createCommandBuffers(device, queueFamilies,1);
+        commandBufferManager.createCommandBuffers(device, queueFamilies,2);
 
-        model.LoadModel(device, "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj", ModelType::OBJ);
+        model.LoadModel(device, "D:/Model/blue-archive-sunohara-kokona/cocona.obj", ModelType::OBJ);
         model.createSampler(device);
         model.createModelIndexBuffer(device,commandBufferManager.commandPool);
         model.createModelVertexBuffer(device,commandBufferManager.commandPool);
@@ -192,6 +253,7 @@ public:
             uniformBuffer.buffer.createBuffer(device,sizeof(UniformBufferObject),
                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            uniformBuffer.buffer.Map();
         }
         syncManager.createSyncObjects(device, MAX_FRAMES_IN_FLIGHT * 1, MAX_FRAMES_IN_FLIGHT * 2 );
         descriptorManager.initialManager(device.device);
@@ -204,6 +266,14 @@ public:
         }
         descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size());
         descriptorManager.createSets();
+        pipeline.initial(device.device).
+        setShader("D:/学习/cpp_program/Vulkan/ProgramCode/Shaders/spv/vert.spv",ShaderStage::VERT)
+        .setShader("D:/学习/cpp_program/Vulkan/ProgramCode/Shaders/spv/frag.spv",ShaderStage::FRAG)
+    .setRasterizerState()
+    .setMultisampleState()
+    .setColorBlendState().setDepthStencilState()
+    .createPipeline( swapChain,descriptorManager
+    , renderPass.m_renderPass );
 
 
 
@@ -213,11 +283,64 @@ public:
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         window = glfwCreateWindow(640 * 2, 480 * 2, "Vulkan", nullptr, nullptr);
+        glfwSetWindowUserPointer(window, this);
+        glfwSetCursorPosCallback(window, mouseCallBack);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
+    static void mouseCallBack(GLFWwindow* window, double xposIn, double yposIn) {
+        float xpos = static_cast<float>(xposIn);
+        float ypos = static_cast<float>(yposIn);
+        auto app = static_cast<MyVulkan*>(glfwGetWindowUserPointer(window));
+
+        if (app->firstMouse) {
+            app->lastX =xpos; app->lastY = ypos;
+            app->firstMouse = false;
+        }
+        auto xoffset = xpos - app->lastX;
+        auto yoffset = app->lastY - ypos;
+
+        app->lastX = xpos;
+        app->lastY = ypos;
+        app->myCamera.ProcessMouseMovement(xoffset, yoffset);
+    }
+
+    static void processInput(GLFWwindow* window, double deltaTime, Camera& camera) {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera.ProcessKeyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera.ProcessKeyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera.ProcessKeyboard(RIGHT, deltaTime);
+    }
+
+
+
     void mainLoop() {
+        double lastFrame = glfwGetTime();
+        double timeForComputeFrame = glfwGetTime();
+        int frameCount = 0;
         while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
+            drawFrame();
+            frameCount++;
+            double currentFrame = glfwGetTime();
+            double deltaTime = currentFrame - lastFrame;
+            double addTime = currentFrame - timeForComputeFrame;
+            processInput(window, deltaTime, myCamera);
+            if (addTime >= 1.0f) {
+                double fps = frameCount / addTime;
+                std::cout << "FPS: " << fps << std::endl;
+                frameCount = 0;
+                timeForComputeFrame = currentFrame;
+            }
+            lastFrame = currentFrame;
         }
+        vkDeviceWaitIdle(device.device); //保证所有资源同步可以正确删除
     }
 };
 

@@ -62,12 +62,12 @@ void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    // pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
     pipelineLayoutInfo.pushConstantRangeCount = 0;//先不使用常量推送
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    // pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pSetLayouts = nullptr;
+    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+    // pipelineLayoutInfo.setLayoutCount = 0;
+    // pipelineLayoutInfo.pSetLayouts = nullptr;
 
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {

@@ -32,15 +32,15 @@ namespace VK::Instances {
 
     class Model {
     public:
-        Sample sampler;
-        std::vector<Mesh> meshes;
-        glm::mat4 modelMatrix;
+        Sample sampler{};
+        std::vector<Mesh> meshes{};
+        glm::mat4 modelMatrix{};
         void LoadModel(const VK::Device& device,const std::string& path, ModelType type);
         void createSampler(const VK::Device& device);
         void createModelVertexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelIndexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelTextureImage(const VK::Device& device, const VkCommandPool& commandPool);
-        void destroy() const;
+        void destroy();
     };
 }
 

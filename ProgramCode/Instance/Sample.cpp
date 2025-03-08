@@ -5,6 +5,7 @@
 #include "Sample.h"
 
 void VK::Instances::Sample::createSampler(const VK::Device &device) {
+    this->device = device.device;
     VkSamplerCreateInfo samplerCreateInfo{};
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
@@ -35,4 +36,8 @@ void VK::Instances::Sample::createSampler(const VK::Device &device) {
         throw std::runtime_error("failed to create texture sampler!");
     }
 
+}
+
+void VK::Instances::Sample::destroySampler(){
+    vkDestroySampler(device, sampler, nullptr);
 }

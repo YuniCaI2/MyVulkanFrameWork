@@ -12,6 +12,9 @@ namespace VK::Instances {
     public:
         VkSampler sampler;
         void createSampler(const VK::Device& device);
+        void destroySampler();
+    private:
+        VkDevice device{};
     };
 }
 

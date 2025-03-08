@@ -14,6 +14,9 @@ void VK::Instances::Image::UnMap() const {
 }
 
 void VK::Instances::Image::destroyImage() const {
+    if (imageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device.device, imageView, nullptr);
+    }
     vkDestroyImage(device.device, image, nullptr);
     vkFreeMemory(device.device, imageMemory, nullptr);
 }

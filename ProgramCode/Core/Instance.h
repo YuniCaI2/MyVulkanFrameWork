@@ -17,7 +17,7 @@ namespace VK {
         [[nodiscard]] std::vector<const char *> getRequiredExtensions() const;
 
         void createInstance();
-        void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+        static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         void setupDebugMessenger();
         void DestroyDebugUtils() const;
         void DestroyInstance() const;

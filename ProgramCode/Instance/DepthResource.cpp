@@ -10,7 +10,7 @@ void VK::Instances::DepthResource::createDepthResources(const VK::Device &device
     const uint32_t &depthBufferNum) {
     this->device = device.device;
     VkFormat depthFormat = Utils::findDepthFormat(device.physicalDevice);
-    depthImages.resize(depthBufferNum);
+    depthImages.reserve(depthBufferNum);
     for (uint32_t i = 0; i < depthBufferNum; i++) {
         VK::Instances::Image depthImage;
         depthImage.createImage(device, extent.width, extent.height, 1,

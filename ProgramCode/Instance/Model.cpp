@@ -17,7 +17,7 @@ void VK::Instances::Model::LoadModel(const VK::Device& device,const std::string&
             throw std::runtime_error("Failed to load OBJ file: " + path);
         }
 
-        if(loader.LoadedMeshes.empty()) {
+        if(! loader.LoadedMeshes.empty()) {
             for (const auto& mesh : loader.LoadedMeshes) {
                 Mesh _mesh;
                 for (const auto& vertex : mesh.Vertices) {
@@ -45,8 +45,12 @@ void VK::Instances::Model::createSampler(const VK::Device &device) {
 
 void VK::Instances::Model::createModelVertexBuffer(const VK::Device& device, const VkCommandPool& commandPool) {
     for (auto & mesh : meshes) {
+        std::cout << "Loaded mesh with " << mesh.vertices.size()
+          << " vertices and " << mesh.indices.size() << " indices.\n";
+
+
         VkDeviceSize size = sizeof(mesh.vertices[0]) * mesh.vertices.size();
-        Buffer stagingBuffer;
+        Buffer stagingBuffer{};
         stagingBuffer.createBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         stagingBuffer.Map();
@@ -65,7 +69,7 @@ void VK::Instances::Model::createModelVertexBuffer(const VK::Device& device, con
 void VK::Instances::Model::createModelIndexBuffer(const VK::Device &device, const VkCommandPool &commandPool) {
     for (auto & mesh : meshes) {
         VkDeviceSize size = sizeof(mesh.indices[0]) * mesh.indices.size();
-        Buffer stagingBuffer;
+        Buffer stagingBuffer{};
         stagingBuffer.createBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         stagingBuffer.Map();
@@ -95,7 +99,7 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
         mesh.texture.image.height = resizedImage.rows;
 
         Buffer stagingBuffer;
-        stagingBuffer.createBuffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        stagingBuffer.createBuffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         stagingBuffer.Map();
         memcpy(stagingBuffer.data, imageData2, static_cast<size_t>(imageSize));
@@ -118,12 +122,13 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
     }
 }
 
-void VK::Instances::Model::destroy() const {
+void VK::Instances::Model::destroy() {
     for (auto & mesh : meshes) {
         mesh.indexBuffer.buffer.destroyBuffer();
         mesh.vertexBuffer.buffer.destroyBuffer();
         mesh.texture.image.destroyImage();
     }
+    sampler.destroySampler();
 }
 
 
