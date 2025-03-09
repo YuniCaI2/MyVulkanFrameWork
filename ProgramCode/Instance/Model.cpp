@@ -117,7 +117,7 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
             VK_FORMAT_R8G8B8A8_SRGB,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
         stagingBuffer.destroyBuffer();
-        mesh.texture.image.imageView = Utils::createImageView(device.device, mesh.texture.image.image,
+        mesh.texture.image.imageView = Utils::createImageView(device.vkDevice, mesh.texture.image.image,
             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
 }

@@ -21,7 +21,7 @@ namespace VK::Instances {
         void destroyBuffer() const;
         void copy(VkBuffer dstBuffer, VkCommandPool commandPool) const;
     private:
-        VkDeviceSize size{};
+         VkDeviceSize size{};
         VK::Device device{};
     };
 }

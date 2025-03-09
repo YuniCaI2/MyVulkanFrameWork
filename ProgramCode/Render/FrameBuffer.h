@@ -11,10 +11,11 @@
 #include "RenderPass.h"
 
 namespace VK::Render {
-    class FrameBuffers {
+    class FrameBuffer {
     public:
-        std::vector<VkFramebuffer> frameBuffers;
-        void createFrameBuffers(const VK::Device& device, const RenderPass& renderPass, const VK::SwapChain& swapChain, const std::vector<VkImageView>& depthBuffers);
+        VkFramebuffer Buffer{};
+        void createFrameBuffers(const VK::Device& device, const RenderPass& renderPass,const VK::SwapChain &swapChain,
+            const std::vector<VkImageView>& attachments);
         void destroyFrameBuffers() const;
 
     private:

@@ -8,7 +8,7 @@
 #include "../Core/Device.h"
 
 namespace VK::Instances {
-    class Sample {
+    class Sampler {
     public:
         VkSampler sampler;
         void createSampler(const VK::Device& device);

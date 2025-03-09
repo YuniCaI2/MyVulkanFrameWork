@@ -8,7 +8,7 @@
 #include <string>
 
 #include "IndexBuffer.h"
-#include "Sample.h"
+#include "Sampler.h"
 #include "TextureImage.h"
 #include "Vertex.h"
 #include "VertexBuffer.h"
@@ -32,7 +32,7 @@ namespace VK::Instances {
 
     class Model {
     public:
-        Sample sampler{};
+        Sampler sampler{};
         std::vector<Mesh> meshes{};
         glm::mat4 modelMatrix{};
         void LoadModel(const VK::Device& device,const std::string& path, ModelType type);

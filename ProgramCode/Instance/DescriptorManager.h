@@ -6,6 +6,7 @@
 #define DESCRIPTORMANAGER_H
 #include <vector>
 #include <vulkan/vulkan_core.h>
+#include "../Utils/utils.h"
 
 namespace VK::Instances {
     class DescriptorManager {

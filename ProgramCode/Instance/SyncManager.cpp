@@ -6,7 +6,7 @@
 
 
 void VK::Instances::SyncManager::createSyncObjects(const VK::Device& device,const uint32_t &FenceNum, const uint32_t &SemaphoreNum) {
-    this->device = device.device;
+    this->device = device.vkDevice;
     Fences.resize(FenceNum);
     Semaphores.resize(SemaphoreNum);
     VkSemaphoreCreateInfo SemaphoreInfo = {
@@ -17,12 +17,12 @@ void VK::Instances::SyncManager::createSyncObjects(const VK::Device& device,cons
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,//代表初始化Fence可用
     };
     for (uint32_t i = 0; i < SemaphoreNum; i++) {
-        if (vkCreateSemaphore(device.device,  &SemaphoreInfo, nullptr, &Semaphores[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(device.vkDevice,  &SemaphoreInfo, nullptr, &Semaphores[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create semaphore");
         }
     }
     for (uint32_t i = 0; i < FenceNum; i++) {
-        if (vkCreateFence(device.device,  &FenceInfo, nullptr, &Fences[i]) != VK_SUCCESS) {
+        if (vkCreateFence(device.vkDevice,  &FenceInfo, nullptr, &Fences[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create fence");
         }
     }

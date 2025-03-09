@@ -12,7 +12,7 @@
 namespace VK {
     class Device {
     public:
-        VkDevice device{};
+        VkDevice vkDevice{};
         VkQueue graphicsQueue{};
         VkQueue presentQueue{};
         VkQueue transferQueue{};

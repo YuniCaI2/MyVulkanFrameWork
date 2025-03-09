@@ -7,8 +7,7 @@
 #include <vector>
 
 #include "../Core/Device.h"
-#include "../Queue/QueueFamily.h"
-#include "../Render/FrameBuffers.h"
+#include "../Render/FrameBuffer.h"
 
 
 namespace VK::Instances {
@@ -16,11 +15,11 @@ namespace VK::Instances {
     public:
         std::vector<VkCommandBuffer> commandBuffers;
         VkCommandPool commandPool{};
-        void createCommandBuffers(const VK::Device& device, const VK::QueueFamily& queueFamily, uint32_t size);
+        void createCommandBuffers(const VK::Device& device, uint32_t size);
         void destroyCommandBuffers() const;
     private:
-        VkDevice device{};
-        void createCommandPool(const VK::QueueFamily& queueFamily);
+        VK::Device device{};
+        void createCommandPool();
     };
 }
 

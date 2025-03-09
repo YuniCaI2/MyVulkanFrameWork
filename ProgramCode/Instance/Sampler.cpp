@@ -2,10 +2,10 @@
 // Created by 51092 on 25-3-6.
 //
 
-#include "Sample.h"
+#include "Sampler.h"
 
-void VK::Instances::Sample::createSampler(const VK::Device &device) {
-    this->device = device.device;
+void VK::Instances::Sampler::createSampler(const VK::Device &device) {
+    this->device = device.vkDevice;
     VkSamplerCreateInfo samplerCreateInfo{};
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
@@ -32,12 +32,12 @@ void VK::Instances::Sample::createSampler(const VK::Device &device) {
     samplerCreateInfo.minLod = 0.0f;
     samplerCreateInfo.maxLod = 1000.0f;
     //这里上面的四个设置适用于mipmap
-    if (vkCreateSampler(device.device, &samplerCreateInfo, nullptr, &sampler) != VK_SUCCESS) {
+    if (vkCreateSampler(device.vkDevice, &samplerCreateInfo, nullptr, &sampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture sampler!");
     }
 
 }
 
-void VK::Instances::Sample::destroySampler(){
+void VK::Instances::Sampler::destroySampler(){
     vkDestroySampler(device, sampler, nullptr);
 }

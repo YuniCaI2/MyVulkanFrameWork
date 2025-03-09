@@ -17,7 +17,7 @@ const std::vector<const char*> deviceExtensions = {
 #endif
 
 void VK::Device::Destroy() {
-    vkDestroyDevice(device, nullptr);
+    vkDestroyDevice(vkDevice, nullptr);
 }
 
 void VK::Device::createDevice(const VK::QueueFamily &queueFamily,
@@ -72,16 +72,16 @@ void VK::Device::createDevice(const VK::QueueFamily &queueFamily,
         throw std::runtime_error("Device does not support Extensions");
     }
 
-    if (vkCreateDevice(physicalDevice.m_physicalDevice,&deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {
+    if (vkCreateDevice(physicalDevice.m_physicalDevice,&deviceCreateInfo, nullptr, &vkDevice) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
 
     //create queue
     int queueIndexOffset = 0;
-    vkGetDeviceQueue(device, queueFamilies[0], 0, &graphicsQueue);
-    vkGetDeviceQueue(device, queueFamilies[1], 0, &presentQueue);
-    vkGetDeviceQueue(device, queueFamilies[2], 0, &transferQueue);
-    vkGetDeviceQueue(device, queueFamilies[3], 0, &computeQueue);
+    vkGetDeviceQueue(vkDevice, queueFamilies[0], 0, &graphicsQueue);
+    vkGetDeviceQueue(vkDevice, queueFamilies[1], 0, &presentQueue);
+    vkGetDeviceQueue(vkDevice, queueFamilies[2], 0, &transferQueue);
+    vkGetDeviceQueue(vkDevice, queueFamilies[3], 0, &computeQueue);
 }
 
 bool VK::Device::checkDeviceExtensionSupport(const VkPhysicalDevice &physicalDevice) {

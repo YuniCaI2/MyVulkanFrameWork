@@ -59,13 +59,13 @@ void VK::SwapChain::createSwapChain(VkPhysicalDevice physicalDevice, const VK::D
     //使用裁剪
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
-    this ->device =device.device;//方便删除
-    if (vkCreateSwapchainKHR(device.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    this ->device =device.vkDevice;//方便删除
+    if (vkCreateSwapchainKHR(device.vkDevice, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
-    vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(device.vkDevice, swapChain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, swapChainImages.data());
+    vkGetSwapchainImagesKHR(device.vkDevice, swapChain, &imageCount, swapChainImages.data());
     createImageViews(surfaceFormat.format);
 }
 
