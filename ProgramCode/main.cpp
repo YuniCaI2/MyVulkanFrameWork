@@ -24,8 +24,8 @@ public:
 
             imguiDrawInstance->BeginRender();
             imguiDrawInstance->DrawUI();
-            VkCommandBuffer commandBuffer = imguiDrawInstance->EndRender();;
-            renderInstance->drawFrame(commandBuffer);
+            auto uiRenderPass = imguiDrawInstance->EndRender();;
+            renderInstance->drawFrame(uiRenderPass, imguiDrawInstance->uiFrameBuffers);
             frameCount++;
             double currentFrame = glfwGetTime();
             double deltaTime = currentFrame - lastFrame;

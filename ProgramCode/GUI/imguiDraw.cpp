@@ -31,11 +31,10 @@ GUI::imguiDraw::~imguiDraw() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     vkDestroyDescriptorPool(vulkanInstance->device.vkDevice, descriptorPool, nullptr);
-    for (const auto& framebuffer :frameBuffers) {
+    for (const auto& framebuffer : uiFrameBuffers) {
         framebuffer.destroyFrameBuffers();
     }
     this->renderPass.DestroyRenderPass();
-    commandBufferManager.destroyCommandBuffers();
 }
 
 
@@ -70,19 +69,17 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
     {
         renderPass.createRenderPass(device.physicalDevice, device.vkDevice, swapChain.format, RenderPassType::GUI);
     }
-    //FrameBuffer
     {
-        frameBuffers.resize(swapChain.swapChainImageViews.size());
-        for (auto i = 0; i < swapChain.swapChainImageViews.size(); ++i) {
-            std::vector<VkImageView> attachments(0);
+        for (size_t i = 0; i < swapChain.swapChainImages.size(); i++) {
+            VK::Render::FrameBuffer framebuffer{};
+            std::vector<VkImageView> attachments{};
             attachments.push_back(swapChain.swapChainImageViews[i]);
-            frameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+            framebuffer.createFrameBuffers(device, renderPass, swapChain, attachments);
+            uiFrameBuffers.push_back(framebuffer);
         }
     }
-    //CommandPool
-    {
-        commandBufferManager.createCommandBuffers(device, MAX_FRAMES_IN_FLIGHT);
-    }
+
+
     //渲染完成的信号量
     //初始化ImGUI
     {
@@ -122,42 +119,14 @@ void GUI::imguiDraw::DrawUI() {
     ImGui::End();
 }
 
-VkCommandBuffer GUI::imguiDraw::EndRender() {
+VkRenderPass GUI::imguiDraw::EndRender() {
     ImGui::Render();
-    auto commandBuffer = FrameRender();
-    return commandBuffer;
+    auto rp = FrameRender();
+    return rp;
 }
 
-VkCommandBuffer GUI::imguiDraw::FrameRender() {
-    uint32_t currentFrame = vulkanInstance->currentFrame;
-    auto commandBuffer = commandBufferManager.commandBuffers[currentFrame];
-    vkWaitForFences(vulkanInstance->device.vkDevice, 1, &vulkanInstance->syncManager.Fences[currentFrame],
-    VK_TRUE, UINT64_MAX);//后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
-    vkResetCommandBuffer(commandBuffer, 0);
-
-    VkCommandBufferBeginInfo commandInfo = {};
-    commandInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    commandInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    VkResult err = vkBeginCommandBuffer(commandBuffer, &commandInfo);
-    check_vk_result(err);
-
-    VkRenderPassBeginInfo renderPassinfo = {};
-    renderPassinfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassinfo.renderPass = renderPass.m_renderPass;
-    renderPassinfo.framebuffer = frameBuffers[vulkanInstance->imageIndex].Buffer;
-    renderPassinfo.renderArea.extent.width = vulkanInstance->swapChain.extent.width;
-    renderPassinfo.renderArea.extent.height = vulkanInstance->swapChain.extent.height;
-    renderPassinfo.clearValueCount = 0;
-    vkCmdBeginRenderPass(commandBuffer, &renderPassinfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    // Record Imgui Draw Data and draw funcs into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-
-    vkCmdEndRenderPass(commandBuffer);
-    err = vkEndCommandBuffer(commandBuffer);
-    check_vk_result(err);
-
-    return commandBuffer;
+VkRenderPass GUI::imguiDraw::FrameRender() {
+    return renderPass.m_renderPass;
 
     // 提交CommandBuffer
 
