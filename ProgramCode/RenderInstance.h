@@ -13,6 +13,7 @@ const bool constexpr  enableValidationLayers = true;
 
 
 
+
 #include <vulkan/vulkan.hpp>
 #include<opencv2/opencv.hpp>
 #include<GLFW/glfw3.h>
@@ -34,6 +35,14 @@ const bool constexpr  enableValidationLayers = true;
 #include "Render/FrameBuffer.h"
 #include "Camera.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define MODEL_PATH "D:/Model/blue-archive-sunohara-kokona/cocona.obj"
+#elif defined(__APPLE__) && defined(__MACH__)
+#define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
+#endif
+
+
+
 class RenderInstance {
 public:
     uint32_t currentFrame{0};
@@ -54,9 +63,10 @@ public:
     VK::Instances::Model model{};
     std::vector<VK::Instances::UniformBuffer> uniformBuffers{};
     VK::Instances::SyncManager syncManager{};
+    uint32_t imageIndex;
 
     RenderInstance() {
-        //HardWare
+        //HardWare Core 与渲染实例绑定
         createWindow();
         instance.createInstance(enableValidationLayers);
         physicalDevice.createPhysicalDevice(instance.instance);
@@ -65,14 +75,13 @@ public:
         device.createDevice(queueFamilies, physicalDevice, enableValidationLayers);
         swapChain.createSwapChain(physicalDevice.Device(),device, window, surface.m_surface);
     }
-private:
-
     //视角移动变量
     bool firstMouse{true};
     float lastX{};
     float lastY{};
     Camera myCamera{};
 public:
+
     RenderInstance* getPtr(){
         return this;
     }
@@ -152,12 +161,11 @@ public:
         }
     }
 
-    void drawFrame() {
+    void drawFrame(VkCommandBuffer GUICommandBuffer) {
         vkWaitForFences(device.vkDevice, 1, &syncManager.Fences[currentFrame],
             VK_TRUE, UINT64_MAX);//后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
-        uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(device.vkDevice, swapChain.swapChain,
-            UINT64_MAX, syncManager.Semaphores[currentFrame * 2],
+            UINT64_MAX, syncManager.Semaphores[currentFrame * 3],
             VK_NULL_HANDLE, &imageIndex);
 
         if (result ==  VK_ERROR_OUT_OF_DATE_KHR ) {
@@ -176,26 +184,41 @@ public:
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphore[] = { syncManager.Semaphores[currentFrame * 2]};
+        VkSemaphore waitSemaphore[] = { syncManager.Semaphores[currentFrame * 3]};
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphore;
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBufferManager.commandBuffers[currentFrame];
-        VkSemaphore signalSemaphores[] = {syncManager.Semaphores[currentFrame * 2 + 1]};
+        VkSemaphore signalSemaphores[] = {syncManager.Semaphores[currentFrame * 3 + 1]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
-        if (vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, syncManager.Fences[currentFrame]) != VK_SUCCESS) {
+        if (vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, nullptr) != VK_SUCCESS) {//Fence由UI托管
             throw std::runtime_error("failed to submit command buffer command buffer submission!");
         }
+        VkSubmitInfo uiSubmitInfo = {};
+        uiSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        uiSubmitInfo.waitSemaphoreCount = 1;
+        uiSubmitInfo.pWaitSemaphores = signalSemaphores;
+        uiSubmitInfo.pWaitDstStageMask = waitStages;
+        uiSubmitInfo.commandBufferCount = 1;
+        uiSubmitInfo.pCommandBuffers = &GUICommandBuffer;
+        uiSubmitInfo.signalSemaphoreCount = 1;
+        uiSubmitInfo.pSignalSemaphores = &syncManager.Semaphores[currentFrame * 3 + 2];
+        if (vkQueueSubmit(device.graphicsQueue, 1, &uiSubmitInfo, syncManager.Fences[currentFrame]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit command buffer ui command buffer submission!");
+        }
+
+
         //当命令缓冲区完成时将发出信号
 
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
+        VkSemaphore waitSemaphoreForPresent[] = {syncManager.Semaphores[currentFrame * 3 + 2]};
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.pWaitSemaphores = waitSemaphoreForPresent;
         //等待信号量实现后，再进行执行
 
         VkSwapchainKHR swapChains[] = {swapChain.swapChain};
@@ -217,18 +240,7 @@ public:
         if (result != VK_SUCCESS) {
             throw std::runtime_error("failed to present swap chain image!");
         }
-
-        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
     }
-
-
-    void run() {
-        initVulkan();
-        mainLoop();
-        cleanup();
-    }
-
     void cleanup() {
         model.destroy();
         syncManager.destroySyncObjects();
@@ -265,7 +277,7 @@ public:
 
         commandBufferManager.createCommandBuffers(device, 2);
 
-        model.LoadModel(device, "D:/Model/blue-archive-sunohara-kokona/cocona.obj", ModelType::OBJ);
+        model.LoadModel(device, MODEL_PATH, ModelType::OBJ);
         model.createSampler(device);
         model.createModelIndexBuffer(device,commandBufferManager.commandPool);
         model.createModelVertexBuffer(device,commandBufferManager.commandPool);
@@ -277,7 +289,7 @@ public:
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             uniformBuffer.buffer.Map();
         }
-        syncManager.createSyncObjects(device, MAX_FRAMES_IN_FLIGHT * 1, MAX_FRAMES_IN_FLIGHT * 2 );
+        syncManager.createSyncObjects(device, MAX_FRAMES_IN_FLIGHT * 1, MAX_FRAMES_IN_FLIGHT * 3 );
         descriptorManager.initialManager(device.vkDevice);
         descriptorManager.setSampler(model.sampler.sampler);
         for (const auto& uniformBuffer : uniformBuffers) {
@@ -289,8 +301,8 @@ public:
         descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size());
         descriptorManager.createSets();
         pipeline.initial(device.vkDevice).
-        setShader("D:/学习/cpp_program/Vulkan/ProgramCode/Shaders/spv/vert.spv",ShaderStage::VERT)
-        .setShader("D:/学习/cpp_program/Vulkan/ProgramCode/Shaders/spv/frag.spv",ShaderStage::FRAG)
+        setShader("../ProgramCode/Shaders/spv/vert.spv",ShaderStage::VERT)
+        .setShader("../ProgramCode/Shaders/spv/frag.spv",ShaderStage::FRAG)
     .setRasterizerState()
     .setMultisampleState()
     .setColorBlendState().setDepthStencilState()
@@ -340,30 +352,6 @@ public:
             camera.ProcessKeyboard(RIGHT, deltaTime);
     }
 
-
-
-    void mainLoop() {
-        double lastFrame = glfwGetTime();
-        double timeForComputeFrame = glfwGetTime();
-        int frameCount = 0;
-        while (!glfwWindowShouldClose(window)) {
-            glfwPollEvents();
-            drawFrame();
-            frameCount++;
-            double currentFrame = glfwGetTime();
-            double deltaTime = currentFrame - lastFrame;
-            double addTime = currentFrame - timeForComputeFrame;
-            processInput(window, deltaTime, myCamera);
-            if (addTime >= 1.0f) {
-                double fps = frameCount / addTime;
-                std::cout << "FPS: " << fps << std::endl;
-                frameCount = 0;
-                timeForComputeFrame = currentFrame;
-            }
-            lastFrame = currentFrame;
-        }
-        vkDeviceWaitIdle(device.vkDevice); //保证所有资源同步可以正确删除
-    }
 };
 
 #endif //MYVULKAN_H

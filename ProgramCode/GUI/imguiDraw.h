@@ -13,7 +13,6 @@ namespace GUI {
         VkDescriptorPool descriptorPool{};
         VK::Instances::CommandBufferManager commandBufferManager{};
         VK::Render::RenderPass renderPass{};
-        VK::Instances::SyncManager syncManager{};
         std::vector<VK::Render::FrameBuffer> frameBuffers{};
 
         imguiDraw(RenderInstance* instance);
@@ -21,8 +20,8 @@ namespace GUI {
         void initVulkanResource(const VK::Instance& instance,GLFWwindow* window, VK::Device& device, const VK::SwapChain& swapChain);
         void BeginRender();
         void DrawUI();
-        void EndRender();
-        void FrameRender();
+        VkCommandBuffer EndRender();
+        VkCommandBuffer FrameRender();
     private:
         RenderInstance* vulkanInstance{nullptr};
     };

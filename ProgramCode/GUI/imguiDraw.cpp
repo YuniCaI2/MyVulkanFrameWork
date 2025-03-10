@@ -31,6 +31,11 @@ GUI::imguiDraw::~imguiDraw() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     vkDestroyDescriptorPool(vulkanInstance->device.vkDevice, descriptorPool, nullptr);
+    for (const auto& framebuffer :frameBuffers) {
+        framebuffer.destroyFrameBuffers();
+    }
+    this->renderPass.DestroyRenderPass();
+    commandBufferManager.destroyCommandBuffers();
 }
 
 
@@ -56,6 +61,8 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
         pool_info.pPoolSizes = pool_sizes;
+        pool_info.poolSizeCount = (sizeof(pool_sizes) / sizeof(VkDescriptorPoolSize));
+        pool_info.maxSets = 1000;
         VkResult err = vkCreateDescriptorPool(device.vkDevice, &pool_info, VK_NULL_HANDLE, &descriptorPool);
         Utils::checkVkResult(err);
     }
@@ -65,6 +72,7 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
     }
     //FrameBuffer
     {
+        frameBuffers.resize(swapChain.swapChainImageViews.size());
         for (auto i = 0; i < swapChain.swapChainImageViews.size(); ++i) {
             std::vector<VkImageView> attachments(0);
             attachments.push_back(swapChain.swapChainImageViews[i]);
@@ -76,9 +84,6 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
         commandBufferManager.createCommandBuffers(device, MAX_FRAMES_IN_FLIGHT);
     }
     //渲染完成的信号量
-    {
-        syncManager.createSyncObjects(device, 0, MAX_FRAMES_IN_FLIGHT);
-    }
     //初始化ImGUI
     {
         ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -98,6 +103,7 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
         init_info.Allocator = VK_NULL_HANDLE;
         init_info.CheckVkResultFn = check_vk_result;
         ImGui_ImplVulkan_Init(&init_info);
+        ImGui_ImplVulkan_CreateFontsTexture();
     }
 }
 
@@ -108,18 +114,26 @@ void GUI::imguiDraw::BeginRender() {
 }
 
 void GUI::imguiDraw::DrawUI() {
-    ImGui::Begin("Settings");
-    ImGui::Text("Application profiler");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));          // 固定在左上角
+    ImGui::SetNextWindowSize(ImVec2(300, static_cast<float>(vulkanInstance->swapChain.extent.height))); // 宽度 200，高度填满
+    ImGui::Begin("Control Panel", nullptr,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+    );
+    // 添加 UI 控件...
     ImGui::End();
 }
 
-void GUI::imguiDraw::EndRender() {
-    FrameRender();
+VkCommandBuffer GUI::imguiDraw::EndRender() {
+    ImGui::Render();
+    auto commandBuffer = FrameRender();
+    return commandBuffer;
 }
 
-void GUI::imguiDraw::FrameRender() {
+VkCommandBuffer GUI::imguiDraw::FrameRender() {
     uint32_t currentFrame = vulkanInstance->currentFrame;
     auto commandBuffer = commandBufferManager.commandBuffers[currentFrame];
+    vkWaitForFences(vulkanInstance->device.vkDevice, 1, &vulkanInstance->syncManager.Fences[currentFrame],
+    VK_TRUE, UINT64_MAX);//后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
     vkResetCommandBuffer(commandBuffer, 0);
 
     VkCommandBufferBeginInfo commandInfo = {};
@@ -131,7 +145,7 @@ void GUI::imguiDraw::FrameRender() {
     VkRenderPassBeginInfo renderPassinfo = {};
     renderPassinfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassinfo.renderPass = renderPass.m_renderPass;
-    renderPassinfo.framebuffer = frameBuffers[currentFrame].Buffer;
+    renderPassinfo.framebuffer = frameBuffers[vulkanInstance->imageIndex].Buffer;
     renderPassinfo.renderArea.extent.width = vulkanInstance->swapChain.extent.width;
     renderPassinfo.renderArea.extent.height = vulkanInstance->swapChain.extent.height;
     renderPassinfo.clearValueCount = 0;
@@ -144,24 +158,9 @@ void GUI::imguiDraw::FrameRender() {
     err = vkEndCommandBuffer(commandBuffer);
     check_vk_result(err);
 
+    return commandBuffer;
+
     // 提交CommandBuffer
-    std::vector<VkPipelineStageFlags> waitStages = {VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-    std::vector<VkSemaphore> waitSemaphores = {vulkanInstance->syncManager.Semaphores[static_cast<size_t>(vulkanInstance->syncManager.Semaphores.size() * MAX_FRAMES_IN_FLIGHT + 1)]};
 
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pCommandBuffers = &commandBuffer;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores.data();
-    submitInfo.pWaitDstStageMask = waitStages.data();
-    submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
-    submitInfo.pSignalSemaphores = &syncManager.Semaphores[currentFrame];
-    submitInfo.signalSemaphoreCount = 1;
-
-    VkFence fence = vulkanInstance->syncManager.Fences[currentFrame];
-    if (vkQueueSubmit(vulkanInstance->device.graphicsQueue, 1, &submitInfo, fence) != VK_SUCCESS)
-        throw std::runtime_error("failed to submit draw command buffer!");
-
-    vulkanInstance->syncManager.Semaphores[vulkanInstance->syncManager.Semaphores.size()* MAX_FRAMES_IN_FLIGHT +1] = syncManager.Semaphores[currentFrame];
 }
 //Recreate后续增加
