@@ -116,9 +116,8 @@ void GUI::imguiDraw::BeginRender() {
 void GUI::imguiDraw::DrawUI() {
     ImGui::SetNextWindowPos(ImVec2(0, 0));          // 固定在左上角
     ImGui::SetNextWindowSize(ImVec2(300, static_cast<float>(vulkanInstance->swapChain.extent.height))); // 宽度 200，高度填满
-    ImGui::Begin("Control Panel", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
-    );
+    ImGui::Begin("Settings");
+
     // 添加 UI 控件...
     ImGui::End();
 }
