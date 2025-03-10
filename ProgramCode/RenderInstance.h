@@ -63,7 +63,8 @@ public:
     VK::Instances::Model model{};
     std::vector<VK::Instances::UniformBuffer> uniformBuffers{};
     VK::Instances::SyncManager syncManager{};
-    uint32_t imageIndex;
+    uint32_t imageIndex{};
+    inline static bool mouseFlag{false};
 
     RenderInstance() {
         //HardWare Core 与渲染实例绑定
@@ -322,25 +323,34 @@ public:
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
     static void mouseCallBack(GLFWwindow* window, double xposIn, double yposIn) {
-        float xpos = static_cast<float>(xposIn);
-        float ypos = static_cast<float>(yposIn);
-        auto app = static_cast<RenderInstance*>(glfwGetWindowUserPointer(window));
+        if (!mouseFlag) {
+            float xpos = static_cast<float>(xposIn);
+            float ypos = static_cast<float>(yposIn);
+            auto app = static_cast<RenderInstance*>(glfwGetWindowUserPointer(window));
 
-        if (app->firstMouse) {
-            app->lastX =xpos; app->lastY = ypos;
-            app->firstMouse = false;
+            if (app->firstMouse) {
+                app->lastX =xpos; app->lastY = ypos;
+                app->firstMouse = false;
+            }
+            auto xoffset = xpos - app->lastX;
+            auto yoffset = app->lastY - ypos;
+
+            app->lastX = xpos;
+            app->lastY = ypos;
+            app->myCamera.ProcessMouseMovement(xoffset, yoffset);
         }
-        auto xoffset = xpos - app->lastX;
-        auto yoffset = app->lastY - ypos;
-
-        app->lastX = xpos;
-        app->lastY = ypos;
-        app->myCamera.ProcessMouseMovement(xoffset, yoffset);
     }
 
-    static void processInput(GLFWwindow* window, double deltaTime, Camera& camera) {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
+    static void processInput(GLFWwindow* window, double deltaTime, Camera& camera,bool& mouseFlag) {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            if(!mouseFlag) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
+            else {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }
+            mouseFlag = !mouseFlag;
+        }
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             camera.ProcessKeyboard(FORWARD, deltaTime);

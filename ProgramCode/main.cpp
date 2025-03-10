@@ -30,7 +30,7 @@ public:
             double currentFrame = glfwGetTime();
             double deltaTime = currentFrame - lastFrame;
             double addTime = currentFrame - timeForComputeFrame;
-            RenderInstance::processInput(renderInstance->window, deltaTime, renderInstance->myCamera);
+            RenderInstance::processInput(renderInstance->window, deltaTime, renderInstance->myCamera, renderInstance->mouseFlag);
             if (addTime >= 1.0f) {
                 double fps = frameCount / addTime;
                 std::cout << "FPS: " << fps << std::endl;
