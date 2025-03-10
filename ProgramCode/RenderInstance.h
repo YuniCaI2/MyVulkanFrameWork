@@ -67,7 +67,7 @@ public:
     inline static bool mouseFlag{false};
 
     RenderInstance() {
-        //HardWare Core 与渲染实例绑定
+        //HardWare Core
         createWindow();
         instance.createInstance(enableValidationLayers);
         physicalDevice.createPhysicalDevice(instance.instance);
