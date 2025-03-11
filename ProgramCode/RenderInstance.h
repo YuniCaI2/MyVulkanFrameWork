@@ -6,7 +6,7 @@
 #define MYVULKAN_H
 
 #ifdef NDEBUG
-    const bool enableValidationLayers = false;
+const bool enableValidationLayers = false;
 #else
 const bool constexpr enableValidationLayers = true;
 #endif
@@ -216,20 +216,6 @@ public:
             //Fence由UI托管
             throw std::runtime_error("failed to submit command buffer command buffer submission!");
         }
-        // VkSubmitInfo uiSubmitInfo = {};
-        // uiSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        // uiSubmitInfo.waitSemaphoreCount = 1;
-        // uiSubmitInfo.pWaitSemaphores = signalSemaphores;
-        // uiSubmitInfo.pWaitDstStageMask = waitStages;
-        // uiSubmitInfo.commandBufferCount = 1;
-        // uiSubmitInfo.pCommandBuffers = &GUICommandBuffer;
-        // uiSubmitInfo.signalSemaphoreCount = 1;
-        // uiSubmitInfo.pSignalSemaphores = &syncManager.Semaphores[currentFrame * 3 + 2];
-        // if (vkQueueSubmit(device.graphicsQueue, 1, &uiSubmitInfo, syncManager.Fences[currentFrame]) != VK_SUCCESS) {
-        //     throw std::runtime_error("failed to submit command buffer ui command buffer submission!");
-        // }
-
-
         //当命令缓冲区完成时将发出信号
 
         VkPresentInfoKHR presentInfo = {};
@@ -344,10 +330,10 @@ public:
     }
 
     static void mouseCallBack(GLFWwindow *window, double xposIn, double yposIn) {
+        auto app = static_cast<RenderInstance *>(glfwGetWindowUserPointer(window));
         if (!mouseFlag) {
             float xpos = static_cast<float>(xposIn);
             float ypos = static_cast<float>(yposIn);
-            auto app = static_cast<RenderInstance *>(glfwGetWindowUserPointer(window));
 
             if (app->firstMouse) {
                 app->lastX = xpos;
@@ -361,10 +347,15 @@ public:
             app->lastY = ypos;
             app->myCamera.ProcessMouseMovement(xoffset, yoffset);
         }
+        else {
+            app->firstMouse = true;
+        }
     }
 
     static void processInput(GLFWwindow *window, double deltaTime, Camera &camera, bool &mouseFlag) {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        static bool lastPressedEsc = false;
+        bool currentPressedEsc = (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS);
+        if (currentPressedEsc && !lastPressedEsc) {
             if (!mouseFlag) {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             } else {
@@ -372,6 +363,7 @@ public:
             }
             mouseFlag = !mouseFlag;
         }
+        lastPressedEsc = currentPressedEsc;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             camera.ProcessKeyboard(FORWARD, deltaTime);
