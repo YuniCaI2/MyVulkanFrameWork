@@ -3,8 +3,8 @@
 
 class AppInstance {
 public:
-    RenderInstance* renderInstance = new RenderInstance();
-    GUI::imguiDraw* imguiDrawInstance = new GUI::imguiDraw(renderInstance);
+    RenderInstance* renderInstance = RenderInstance::getInstance();
+    GUI::imguiDraw* imguiDrawInstance = new GUI::imguiDraw();
     ~AppInstance() {
         delete imguiDrawInstance;
         renderInstance->cleanup();

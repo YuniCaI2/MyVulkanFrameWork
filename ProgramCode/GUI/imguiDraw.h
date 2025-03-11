@@ -15,7 +15,7 @@ namespace GUI {
         std::vector<VK::Render::FrameBuffer> uiFrameBuffers{};
         VK::Instances::CommandBufferManager commandBufferManager{};
 
-        imguiDraw(RenderInstance* instance);
+        imguiDraw();
         ~imguiDraw();
         void initVulkanResource(const VK::Instance& instance,GLFWwindow* window, VK::Device& device, const VK::SwapChain& swapChain);
         void BeginRender();

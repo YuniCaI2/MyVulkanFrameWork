@@ -13,7 +13,8 @@ constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 enum class RenderPassType {
     FORWARD,
-    GUI
+    GUI,
+    MSAA
 };
 
 namespace Utils {
@@ -29,6 +30,8 @@ namespace Utils {
     void transitionImageLayout(const VK::Device& device, const VkCommandPool& commandPool,VkImage image, VkFormat format, VkImageLayout oldLayout,
         VkImageLayout newLayout, uint32_t mipLevels);
     void checkVkResult(VkResult result);
+    VkSampleCountFlagBits getMaxUsableSampleCount(const VkPhysicalDevice& physicalDevice);
+
 
 }
 #endif //UTILS_H

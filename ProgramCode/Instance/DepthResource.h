@@ -12,7 +12,7 @@ namespace VK::Instances {
     class DepthResource {
     public:
         std::vector<Image> depthImages = {};
-        void createDepthResources(const VK::Device& device, const VkExtent2D& extent,const uint32_t& depthBufferNum);
+        void createDepthResources(const VK::Device& device, const VkExtent2D& extent,const VkSampleCountFlagBits& msaaSample,const uint32_t& depthBufferNum);
         void destroyDepthResources() const;
         std::vector<VkImageView> getImageViews() const;
     private:

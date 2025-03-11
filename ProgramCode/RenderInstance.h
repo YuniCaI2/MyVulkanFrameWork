@@ -39,10 +39,31 @@ const bool constexpr enableValidationLayers = true;
 #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
 #endif
 
+enum class RenderType {
+    NORMAL,
+    MSAA
+};
+
 
 class RenderInstance {
+    RenderInstance() {
+        //核心
+        createWindow();
+        instance.createInstance(enableValidationLayers);
+        physicalDevice.createPhysicalDevice(instance.instance);
+        surface.createSurface(instance, window);
+        queueFamilies.createQueueFamily(physicalDevice.m_physicalDevice, surface.m_surface);
+        device.createDevice(queueFamilies, physicalDevice, enableValidationLayers);
+        swapChain.createSwapChain(physicalDevice.Device(), device, window, surface.m_surface);
+    }// 🚫必须私有构造函数
 public:
-
+    RenderInstance(const RenderInstance&) = delete;  // 🔒禁止拷贝
+    RenderInstance& operator=(const RenderInstance&) = delete; // 🔐禁止赋值
+public:
+    static RenderInstance* getInstance() {
+        static auto* instance = new RenderInstance();
+        return instance;
+    };
     //Core
     GLFWwindow *window{};
     VK::Instance instance{};
@@ -65,6 +86,10 @@ public:
     std::vector<VK::Render::FrameBuffer> uiFrameBuffers{};
     inline static bool mouseFlag{false};
 
+    //RenderInstance 所对应的RenderType
+    RenderType renderType{RenderType::NORMAL};
+
+
     //视角移动变量
     bool firstMouse{true};
     float lastX{};
@@ -75,16 +100,10 @@ public:
     uint32_t currentFrame{0};
     float currentFPS;
 
-    RenderInstance() {
-        //HardWare Core
-        createWindow();
-        instance.createInstance(enableValidationLayers);
-        physicalDevice.createPhysicalDevice(instance.instance);
-        surface.createSurface(instance, window);
-        queueFamilies.createQueueFamily(physicalDevice.m_physicalDevice, surface.m_surface);
-        device.createDevice(queueFamilies, physicalDevice, enableValidationLayers);
-        swapChain.createSwapChain(physicalDevice.Device(), device, window, surface.m_surface);
-    }
+    //前向渲染实例——MSAA设置
+    VkSampleCountFlagBits msaaSamples{VK_SAMPLE_COUNT_1_BIT};
+    VkSampleCountFlagBits maxMsaaSamples{VK_SAMPLE_COUNT_1_BIT};
+    std::vector<VK::Render::FrameBuffer> massFrameBuffers{};
 
 
 public:
@@ -232,7 +251,7 @@ public:
         cleanupSwapChain();
         //recreate
         swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
-        depthResource.createDepthResources(device, swapChain.extent, swapChain.swapChainImages.size());
+        depthResource.createDepthResources(device, swapChain.extent,msaaSamples, swapChain.swapChainImages.size());
 
         for (auto i =0; i <presentFrameBuffers.size(); ++i) {
             std::vector<VkImageView> attachments{};
@@ -274,7 +293,7 @@ public:
     void initVulkan() {
         renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
                                     RenderPassType::FORWARD);
-        depthResource.createDepthResources(device, swapChain.extent, swapChain.swapChainImages.size());
+        depthResource.createDepthResources(device, swapChain.extent, msaaSamples,swapChain.swapChainImages.size());
         //创建交换链的帧缓冲
         for (size_t i = 0; i < swapChain.swapChainImages.size(); i++) {
             VK::Render::FrameBuffer framebuffer{};
@@ -320,6 +339,13 @@ public:
                 .setColorBlendState().setDepthStencilState()
                 .createPipeline(swapChain, descriptorManager
                                 , renderPass.m_renderPass);
+        //创建颜色附件
+
+        //创建MSAA帧缓冲
+
+
+        //参数：
+        maxMsaaSamples = Utils::getMaxUsableSampleCount(device.physicalDevice);
 
     }
 

@@ -17,8 +17,8 @@ static void check_vk_result(VkResult err) {
 }
 
 
-GUI::imguiDraw::imguiDraw(RenderInstance* myinstance){//主管线的同步信号
-    vulkanInstance = myinstance;
+GUI::imguiDraw::imguiDraw(){//主管线的同步信号
+    vulkanInstance = RenderInstance::getInstance();
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -120,6 +120,72 @@ void GUI::imguiDraw::DrawUI() {
     ImGui::SetNextWindowSize(ImVec2(300, static_cast<float>(vulkanInstance->swapChain.extent.height))); // 宽度 200，高度填满
     ImGui::Begin("Settings");
     ImGui::Text("FPS: %.1f", vulkanInstance->currentFPS);
+
+    // 1. 按钮
+    if (ImGui::Button("Click Me")) {
+        // 按钮被点击时的回调
+        std::cout << "Button clicked!" << std::endl;
+    }
+
+    // 2. 文本输入框
+    static char textInput[128] = "Hello";
+    ImGui::InputText("Input Text", textInput, IM_ARRAYSIZE(textInput));
+
+    // 3. 滑动条（浮点数）
+    static float sliderValue = 0.5f;
+    ImGui::SliderFloat("Slider", &sliderValue, 0.0f, 1.0f);
+
+    // 4. 复选框
+    static bool checkBoxValue = false;
+    ImGui::Checkbox("Checkbox", &checkBoxValue);
+
+    ImGui::Separator();
+
+
+    // 5. 单选框
+    static int radioValue = 0;
+    ImGui::RadioButton("Option A", &radioValue, 0); ImGui::SameLine();
+    ImGui::RadioButton("Option B", &radioValue, 1);
+
+    ImGui::Separator();
+
+
+    static const char* items[] = { "Apple", "Banana", "Cherry" };
+    static int itemCurrent = 0;
+    ImGui::Combo("Combo Box", &itemCurrent, items, IM_ARRAYSIZE(items));
+
+    ImGui::Separator();
+
+
+    ImGui::ListBox("List", &itemCurrent, items, IM_ARRAYSIZE(items));
+
+    ImGui::Separator();
+
+    if (ImGui::TreeNode("Tree Node")) {
+        ImGui::Text("Child Content");
+        ImGui::TreePop();
+    }
+
+    if (ImGui::BeginTable("Table", 3, ImGuiTableFlags_Borders)) {
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Value");
+        ImGui::TableSetupColumn("Status");
+        ImGui::TableHeadersRow();
+
+        for (int row = 0; row < 3; row++) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Item %d", row);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.2f", 100.0f * row);
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Checkbox("##check", &checkBoxValue);
+        }
+        ImGui::EndTable();
+    }
+
+
+
     // 添加 UI 控件...
     ImGui::End();
 }

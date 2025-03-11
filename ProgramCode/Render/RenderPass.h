@@ -12,11 +12,13 @@ namespace VK::Render {
     class RenderPass {
     public:
         VkRenderPass m_renderPass;
+        VkSampleCountFlagBits sampleCount{VK_SAMPLE_COUNT_1_BIT};
         void setAttachmentDescription(const VkAttachmentDescription& attachmentDescription);
         void setAttachmentReference(const VkAttachmentReference& attachmentReference);
         void setSubpassDescription(const VkSubpassDescription& subpassDescription);
         void createRenderPass(const VkPhysicalDevice& physicalDeivce,const VkDevice& device, const VkFormat& format, RenderPassType renderPassType);
         void setSubpassDependency(const VkSubpassDependency& subpassDependency);
+        void setMsaaCount(VkSampleCountFlagBits msaaCount);
         void DestroyRenderPass() const;
     private:
         std::vector<VkAttachmentDescription> attachments;
