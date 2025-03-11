@@ -31,6 +31,7 @@ GUI::imguiDraw::~imguiDraw() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     vkDestroyDescriptorPool(vulkanInstance->device.vkDevice, descriptorPool, nullptr);
+    commandBufferManager.destroyCommandBuffers();
     for (const auto& framebuffer : uiFrameBuffers) {
         framebuffer.destroyFrameBuffers();
     }
@@ -78,6 +79,10 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
             uiFrameBuffers.push_back(framebuffer);
         }
     }
+    {
+        commandBufferManager.createCommandBuffers(device, 2);
+        //创建
+    }
 
 
     //渲染完成的信号量
@@ -114,21 +119,67 @@ void GUI::imguiDraw::DrawUI() {
     ImGui::SetNextWindowPos(ImVec2(0, 0));          // 固定在左上角
     ImGui::SetNextWindowSize(ImVec2(300, static_cast<float>(vulkanInstance->swapChain.extent.height))); // 宽度 200，高度填满
     ImGui::Begin("Settings");
-
+    ImGui::Text("FPS: %.1f", vulkanInstance->currentFPS);
     // 添加 UI 控件...
     ImGui::End();
 }
 
-VkRenderPass GUI::imguiDraw::EndRender() {
+VkCommandBuffer GUI::imguiDraw::EndRender() {
     ImGui::Render();
-    auto rp = FrameRender();
-    return rp;
+    return SubmitFrameRender();
 }
 
-VkRenderPass GUI::imguiDraw::FrameRender() {
-    return renderPass.m_renderPass;
-
+VkCommandBuffer GUI::imguiDraw::SubmitFrameRender() {
+    vkWaitForFences(vulkanInstance->device.vkDevice, 1, &vulkanInstance->syncManager.Fences[vulkanInstance->currentFrame],
+        VK_TRUE, UINT64_MAX); //后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
     // 提交CommandBuffer
+    vkResetCommandBuffer(commandBufferManager.commandBuffers[vulkanInstance->currentFrame], 0);
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; //这个参数指定我们如何使用帧缓冲区
+    beginInfo.pInheritanceInfo = nullptr; //这个参数与辅助缓冲区有关；
+    if (vkBeginCommandBuffer(commandBufferManager.commandBuffers[vulkanInstance->currentFrame], &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+    VkRenderPassBeginInfo uiRenderPassinfo = {};
+    uiRenderPassinfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    uiRenderPassinfo.renderPass = renderPass.m_renderPass;
+    uiRenderPassinfo.framebuffer = uiFrameBuffers[vulkanInstance->imageIndex].Buffer;
+    uiRenderPassinfo.renderArea.extent.width = vulkanInstance->swapChain.extent.width;
+    uiRenderPassinfo.renderArea.extent.height = vulkanInstance->swapChain.extent.height;
+    uiRenderPassinfo.clearValueCount = 0;
 
+    vkCmdBeginRenderPass(commandBufferManager.commandBuffers[vulkanInstance->currentFrame], &uiRenderPassinfo, VK_SUBPASS_CONTENTS_INLINE);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBufferManager.commandBuffers[vulkanInstance->currentFrame]);
+    vkCmdEndRenderPass(commandBufferManager.commandBuffers[vulkanInstance->currentFrame]);
+
+    if (vkEndCommandBuffer(commandBufferManager.commandBuffers[vulkanInstance->currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+    return commandBufferManager.commandBuffers[vulkanInstance->currentFrame];
 }
+
+void GUI::imguiDraw::recreateFrameBuffers() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(vulkanInstance->window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(vulkanInstance->window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(vulkanInstance->device.vkDevice);
+    destroyFrameBuffers();
+    for (size_t i = 0; i < vulkanInstance->swapChain.swapChainImages.size(); i++) {
+        std::vector<VkImageView> attachments{};
+        attachments.push_back(vulkanInstance->swapChain.swapChainImageViews[i]);
+        uiFrameBuffers[i].createFrameBuffers(vulkanInstance->device, renderPass, vulkanInstance->swapChain, attachments);
+    }
+}
+
+void GUI::imguiDraw::destroyFrameBuffers() const {
+    for (const auto& framebuffer : uiFrameBuffers) {
+        framebuffer.destroyFrameBuffers();
+    }
+}
+
 //Recreate后续增加

@@ -12,10 +12,6 @@ const bool constexpr enableValidationLayers = true;
 #endif
 
 
-#include "./GUI/imgui/imgui_impl_glfw.h"
-#include "./GUI/imgui/imgui_impl_vulkan.h"
-#include "./GUI/imgui/imgui.h"
-
 #include <vulkan/vulkan.hpp>
 #include<opencv2/opencv.hpp>
 #include<GLFW/glfw3.h>
@@ -46,7 +42,7 @@ const bool constexpr enableValidationLayers = true;
 
 class RenderInstance {
 public:
-    uint32_t currentFrame{0};
+
     //Core
     GLFWwindow *window{};
     VK::Instance instance{};
@@ -55,6 +51,7 @@ public:
     VK::QueueFamily queueFamilies{};
     VK::Device device{};
     VK::SwapChain swapChain{};
+    //Render
     VK::Render::RenderPass renderPass{};
     VK::Render::Pipeline pipeline{};
     VK::Instances::DescriptorManager descriptorManager{};
@@ -68,6 +65,16 @@ public:
     std::vector<VK::Render::FrameBuffer> uiFrameBuffers{};
     inline static bool mouseFlag{false};
 
+    //视角移动变量
+    bool firstMouse{true};
+    float lastX{};
+    float lastY{};
+    Camera myCamera{};
+
+    //屏幕信息
+    uint32_t currentFrame{0};
+    float currentFPS;
+
     RenderInstance() {
         //HardWare Core
         createWindow();
@@ -79,19 +86,13 @@ public:
         swapChain.createSwapChain(physicalDevice.Device(), device, window, surface.m_surface);
     }
 
-    //视角移动变量
-    bool firstMouse{true};
-    float lastX{};
-    float lastY{};
-    Camera myCamera{};
 
 public:
     RenderInstance *getPtr() {
         return this;
     }
 
-    void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex,
-                             const VkRenderPass &uiRenderPass, const std::vector<VK::Render::FrameBuffer> &uiFrameBuffers) {
+    void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; //这个参数指定我们如何使用帧缓冲区
@@ -152,51 +153,26 @@ public:
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model.meshes[i].indices.size()), 1, 0, 0, 0);
             //后面的参数用来对齐索引和顶点
         }
-        //加载模型中的顶点
-        // updateUniformBuffer(currentFrame, i);
-        // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        //     pipelineLayout, 0, 1,
-        //     &descriptorSets[currentFrame], 0, nullptr);
-        // vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
-        //后面的参数用来对齐索引和顶点
         vkCmdEndRenderPass(commandBuffer);
-
-        VkRenderPassBeginInfo uiRenderPassinfo = {};
-        uiRenderPassinfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        uiRenderPassinfo.renderPass = uiRenderPass;
-        uiRenderPassinfo.framebuffer = uiFrameBuffers[imageIndex].Buffer;
-        uiRenderPassinfo.renderArea.extent.width = swapChain.extent.width;
-        uiRenderPassinfo.renderArea.extent.height = swapChain.extent.height;
-        uiRenderPassinfo.clearValueCount = 0;
-
-        vkCmdBeginRenderPass(commandBuffer, &uiRenderPassinfo, VK_SUBPASS_CONTENTS_INLINE);
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-        vkCmdEndRenderPass(commandBuffer);
-
-
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
         }
     }
-
-    void drawFrame(const VkRenderPass &uiRenderPass, const std::vector<VK::Render::FrameBuffer> &uiFrameBuffers) {
+    //分解drawFrame，便于加载UI
+    auto getAvaliableImageIndex() {
         vkWaitForFences(device.vkDevice, 1, &syncManager.Fences[currentFrame],
-                        VK_TRUE, UINT64_MAX); //后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
+                VK_TRUE, UINT64_MAX); //后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
         VkResult result = vkAcquireNextImageKHR(device.vkDevice, swapChain.swapChain,
                                                 UINT64_MAX, syncManager.Semaphores[currentFrame * 2],
                                                 VK_NULL_HANDLE, &imageIndex);
-
-        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-            // recreateSwapChain();
-            return;
-        } else if (result != VK_SUBOPTIMAL_KHR && result != VK_SUCCESS) {
-            throw std::runtime_error("failed to acquire swap chain image!");
-        }
-        vkResetFences(device.vkDevice, 1, &syncManager.Fences[currentFrame]); //手动设置为无信号
+        return result;
+    }
+    void submitCommandBuffer(const VkCommandBuffer& addCommandBuffer) {
+        vkResetFences(device.vkDevice, 1, &syncManager.Fences[currentFrame]); //手动设置为无信号,上一轮
 
         //这里是以纳秒为单位的
         vkResetCommandBuffer(commandBufferManager.commandBuffers[currentFrame], 0);
-        recordCommandBuffer(commandBufferManager.commandBuffers[currentFrame], imageIndex, uiRenderPass, uiFrameBuffers);
+        recordCommandBuffer(commandBufferManager.commandBuffers[currentFrame], imageIndex);
         //这里来记录我们想要的命令,录制命令
         //有了完整的命令，之后就要提交它
         VkSubmitInfo submitInfo = {};
@@ -207,8 +183,12 @@ public:
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphore;
         submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBufferManager.commandBuffers[currentFrame];
+        std::array<VkCommandBuffer, 2> commandBuffers = {
+                commandBufferManager.commandBuffers[currentFrame],
+                addCommandBuffer
+        };
+        submitInfo.commandBufferCount = commandBuffers.size();
+        submitInfo.pCommandBuffers = commandBuffers.data();
         VkSemaphore signalSemaphores[] = {syncManager.Semaphores[currentFrame * 2 + 1]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
@@ -216,7 +196,8 @@ public:
             //Fence由UI托管
             throw std::runtime_error("failed to submit command buffer command buffer submission!");
         }
-        //当命令缓冲区完成时将发出信号
+    }
+    auto presentFrame() {
 
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -234,18 +215,43 @@ public:
         /*它允许您指定VkResult值数组来检查每个单独的交换链是否呈现成功。
          如果您只使用单个交换链，则没有必要，因为您可以简单地使用当前函数的返回值。
          */
-        result = vkQueuePresentKHR(device.presentQueue, &presentInfo);
-
-        // if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        //     //交换链已经与表面不兼容，无法再用于渲染。通常与窗口大小发生调整有关。
-        //     //交换链仍然可以成功呈现到表面，但是表面属性不再完全匹配
-        //     recreateSwapChain();
-        //     framebufferResized = false;
-        // } else
-        if (result != VK_SUCCESS) {
-            throw std::runtime_error("failed to present swap chain image!");
-        }
+        auto result = vkQueuePresentKHR(device.presentQueue, &presentInfo);
+        return result;
     }
+
+    //重建交换链和帧缓冲
+    void recreateSwapChain() {
+        int width = 0, height = 0;
+        glfwGetFramebufferSize(window, &width, &height);
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(window, &width, &height);
+            glfwWaitEvents();
+        }
+        //destroy
+        vkDeviceWaitIdle(device.vkDevice);
+        cleanupSwapChain();
+        //recreate
+        swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+        depthResource.createDepthResources(device, swapChain.extent, swapChain.swapChainImages.size());
+
+        for (auto i =0; i <presentFrameBuffers.size(); ++i) {
+            std::vector<VkImageView> attachments{};
+            attachments.push_back(swapChain.swapChainImageViews[i]);
+            attachments.push_back(depthResource.getImageViews()[i]);
+            presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+        }
+
+    }
+
+
+    void cleanupSwapChain() {
+        for (const auto &framebuffer: presentFrameBuffers) {
+            framebuffer.destroyFrameBuffers();
+        }
+        depthResource.destroyDepthResources();
+        swapChain.DestroySwapChain();
+    }
+
 
     void cleanup() {
         model.destroy();
@@ -254,14 +260,10 @@ public:
             uniformBuffers[i].buffer.destroyBuffer();
         }
         commandBufferManager.destroyCommandBuffers();
-        depthResource.destroyDepthResources();
         descriptorManager.destroy();
-        for (const auto &framebuffer: presentFrameBuffers) {
-            framebuffer.destroyFrameBuffers();
-        }
+        cleanupSwapChain();
         pipeline.Destroy();
         renderPass.DestroyRenderPass();
-        swapChain.DestroySwapChain();
         surface.DestroySurface();
         device.Destroy();
         instance.DestroyInstance();
@@ -298,7 +300,8 @@ public:
                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             uniformBuffer.buffer.Map();
         }
-        syncManager.createSyncObjects(device, MAX_FRAMES_IN_FLIGHT * 1, MAX_FRAMES_IN_FLIGHT * 2);
+        syncManager.createSyncObjects(device, MAX_FRAMES_IN_FLIGHT * 1, MAX_FRAMES_IN_FLIGHT * 2
+            );
         descriptorManager.initialManager(device.vkDevice);
         descriptorManager.setSampler(model.sampler.sampler);
         for (const auto &uniformBuffer: uniformBuffers) {
