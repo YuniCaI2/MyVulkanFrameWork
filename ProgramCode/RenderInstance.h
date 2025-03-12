@@ -297,9 +297,12 @@ public:
         commandBufferManager.destroyCommandBuffers();
         descriptorManager.destroy();
         cleanupSwapChain();
+
         if(! (RenderType::MSAA == renderType)) {
             colorResource.destroyColorResources();
+            //保证删除color Resource
         }
+
         pipeline.Destroy();
         renderPass.DestroyRenderPass();
         surface.DestroySurface();
@@ -310,7 +313,7 @@ public:
     }
 
     void initVulkan() {
-        renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
+        renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,msaaSamples,
                                     RenderPassType::FORWARD);
         depthResource.createDepthResources(device, swapChain.extent, msaaSamples, swapChain.swapChainImages.size());
         //创建交换链的帧缓冲
@@ -358,15 +361,10 @@ public:
                 .setColorBlendState().setDepthStencilState()
                 .createPipeline(swapChain, descriptorManager
                                 , renderPass.m_renderPass);
-        //创建颜色附件
+        //创建颜色附件用于MSAA
         colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
                                            swapChain.swapChainImages.size());
-
-
-        //创建MSAA帧缓冲
-
-
-        //参数：
+        //MSAA参数：
         maxMsaaSamples = Utils::getMaxUsableSampleCount(device.physicalDevice);
     }
 
@@ -378,7 +376,7 @@ public:
                 renderPass.DestroyRenderPass();
                 pipeline.Destroy();
                 swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
-                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
+                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,msaaSamples,
                                             RenderPassType::MSAA);
                 depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
                                                    swapChain.swapChainImages.size());
@@ -407,9 +405,9 @@ public:
                 renderPass.DestroyRenderPass();
                 pipeline.Destroy();
 
-                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
-                                            RenderPassType::FORWARD);
                 swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,msaaSamples,
+                                            RenderPassType::FORWARD);
                 depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
                                                    swapChain.swapChainImages.size());
                 for (auto i = 0; i < presentFrameBuffers.size(); ++i) {

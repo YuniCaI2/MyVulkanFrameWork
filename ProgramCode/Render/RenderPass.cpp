@@ -22,7 +22,7 @@ void VK::Render::RenderPass::setAttachmentReference(const VkAttachmentReference 
 
 
 void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDevice, const VkDevice &device,
-                                              const VkFormat &format, RenderPassType renderPassType) {
+                                              const VkFormat &format, const VkSampleCountFlagBits& sampleCount, RenderPassType renderPassType) {
     this->device = device;
     this->swapchainImageFormat = format;
     this->physicalDevice = physicalDevice;
@@ -145,7 +145,6 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
         }
     }
     if (renderPassType == RenderPassType::MSAA) {
-        sampleCount = VK_SAMPLE_COUNT_8_BIT;
         setAttachmentDescription({
             .flags = 0, // 显式初始化可选字段
             .format = swapchainImageFormat,
@@ -187,7 +186,7 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // 调整到正确位置
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, // 调整到正确位置
             .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR //渲染至屏幕
         });
 

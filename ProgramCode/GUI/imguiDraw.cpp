@@ -68,7 +68,7 @@ void GUI::imguiDraw::initVulkanResource(const VK::Instance &instance, GLFWwindow
     }
     //RenderPass
     {
-        renderPass.createRenderPass(device.physicalDevice, device.vkDevice, swapChain.format, RenderPassType::GUI);
+        renderPass.createRenderPass(device.physicalDevice, device.vkDevice, swapChain.format, VK_SAMPLE_COUNT_1_BIT,RenderPassType::GUI);
     }
     {
         for (size_t i = 0; i < swapChain.swapChainImages.size(); i++) {

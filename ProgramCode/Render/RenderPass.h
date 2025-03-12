@@ -16,7 +16,7 @@ namespace VK::Render {
         void setAttachmentDescription(const VkAttachmentDescription& attachmentDescription);
         void setAttachmentReference(const VkAttachmentReference& attachmentReference);
         void setSubpassDescription(const VkSubpassDescription& subpassDescription);
-        void createRenderPass(const VkPhysicalDevice& physicalDeivce,const VkDevice& device, const VkFormat& format, RenderPassType renderPassType);
+        void createRenderPass(const VkPhysicalDevice& physicalDeivce,const VkDevice& device, const VkFormat& format, const VkSampleCountFlagBits& sampleCount,RenderPassType renderPassType);
         void setSubpassDependency(const VkSubpassDependency& subpassDependency);
         void setMsaaCount(VkSampleCountFlagBits msaaCount);
         void DestroyRenderPass() ;
