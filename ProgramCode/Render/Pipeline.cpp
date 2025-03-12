@@ -209,6 +209,8 @@ VK::Render::Pipeline& VK::Render::Pipeline::setColorBlendState() {
 }
 
 void VK::Render::Pipeline::Destroy() {
+    this->shaderStages.clear();
+    this->shaders.clear();
     vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
     vkDestroyPipeline(device, m_pipeline, nullptr);
 }

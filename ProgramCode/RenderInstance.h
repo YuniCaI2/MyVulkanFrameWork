@@ -4,6 +4,7 @@
 
 #ifndef MYVULKAN_H
 #define MYVULKAN_H
+#include "Instance/ColorResource.h"
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -55,13 +56,13 @@ class RenderInstance {
         queueFamilies.createQueueFamily(physicalDevice.m_physicalDevice, surface.m_surface);
         device.createDevice(queueFamilies, physicalDevice, enableValidationLayers);
         swapChain.createSwapChain(physicalDevice.Device(), device, window, surface.m_surface);
-    }// 🚫必须私有构造函数
+    } // 🚫必须私有构造函数
 public:
-    RenderInstance(const RenderInstance&) = delete;  // 🔒禁止拷贝
-    RenderInstance& operator=(const RenderInstance&) = delete; // 🔐禁止赋值
+    RenderInstance(const RenderInstance &) = delete; // 🔒禁止拷贝
+    RenderInstance &operator=(const RenderInstance &) = delete; // 🔐禁止赋值
 public:
-    static RenderInstance* getInstance() {
-        static auto* instance = new RenderInstance();
+    static RenderInstance *getInstance() {
+        static auto *instance = new RenderInstance();
         return instance;
     };
     //Core
@@ -104,7 +105,7 @@ public:
     VkSampleCountFlagBits msaaSamples{VK_SAMPLE_COUNT_1_BIT};
     VkSampleCountFlagBits maxMsaaSamples{VK_SAMPLE_COUNT_1_BIT};
     std::vector<VK::Render::FrameBuffer> massFrameBuffers{};
-
+    VK::Instances::ColorResource colorResource{};
 
 public:
     RenderInstance *getPtr() {
@@ -177,16 +178,18 @@ public:
             throw std::runtime_error("failed to record command buffer!");
         }
     }
+
     //分解drawFrame，便于加载UI
     auto getAvaliableImageIndex() {
         vkWaitForFences(device.vkDevice, 1, &syncManager.Fences[currentFrame],
-                VK_TRUE, UINT64_MAX); //后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
+                        VK_TRUE, UINT64_MAX); //后面参数是超时参数，VK_TRUE指的是要等待所有的Fence
         VkResult result = vkAcquireNextImageKHR(device.vkDevice, swapChain.swapChain,
                                                 UINT64_MAX, syncManager.Semaphores[currentFrame * 2],
                                                 VK_NULL_HANDLE, &imageIndex);
         return result;
     }
-    void submitCommandBuffer(const VkCommandBuffer& addCommandBuffer) {
+
+    void submitCommandBuffer(const VkCommandBuffer &addCommandBuffer) {
         vkResetFences(device.vkDevice, 1, &syncManager.Fences[currentFrame]); //手动设置为无信号,上一轮
 
         //这里是以纳秒为单位的
@@ -203,8 +206,8 @@ public:
         submitInfo.pWaitSemaphores = waitSemaphore;
         submitInfo.pWaitDstStageMask = waitStages;
         std::array<VkCommandBuffer, 2> commandBuffers = {
-                commandBufferManager.commandBuffers[currentFrame],
-                addCommandBuffer
+            commandBufferManager.commandBuffers[currentFrame],
+            addCommandBuffer
         };
         submitInfo.commandBufferCount = commandBuffers.size();
         submitInfo.pCommandBuffers = commandBuffers.data();
@@ -216,8 +219,8 @@ public:
             throw std::runtime_error("failed to submit command buffer command buffer submission!");
         }
     }
-    auto presentFrame() {
 
+    auto presentFrame() {
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -251,21 +254,34 @@ public:
         cleanupSwapChain();
         //recreate
         swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
-        depthResource.createDepthResources(device, swapChain.extent,msaaSamples, swapChain.swapChainImages.size());
-
-        for (auto i =0; i <presentFrameBuffers.size(); ++i) {
-            std::vector<VkImageView> attachments{};
-            attachments.push_back(swapChain.swapChainImageViews[i]);
-            attachments.push_back(depthResource.getImageViews()[i]);
-            presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+        depthResource.createDepthResources(device, swapChain.extent, msaaSamples, swapChain.swapChainImages.size());
+        if (renderType == RenderType::MSAA) {
+            colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
+                                               swapChain.swapChainImages.size());
+            for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                std::vector<VkImageView> attachments{};
+                attachments.push_back(colorResource.getImageViews()[i]);
+                attachments.push_back(swapChain.swapChainImageViews[i]);
+                attachments.push_back(depthResource.getImageViews()[i]);
+                presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+            }
+        } else {
+            for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                std::vector<VkImageView> attachments{};
+                attachments.push_back(swapChain.swapChainImageViews[i]);
+                attachments.push_back(depthResource.getImageViews()[i]);
+                presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+            }
         }
-
     }
 
 
     void cleanupSwapChain() {
         for (const auto &framebuffer: presentFrameBuffers) {
             framebuffer.destroyFrameBuffers();
+        }
+        if(renderType == RenderType::MSAA) {
+            colorResource.destroyColorResources();
         }
         depthResource.destroyDepthResources();
         swapChain.DestroySwapChain();
@@ -281,6 +297,9 @@ public:
         commandBufferManager.destroyCommandBuffers();
         descriptorManager.destroy();
         cleanupSwapChain();
+        if(! (RenderType::MSAA == renderType)) {
+            colorResource.destroyColorResources();
+        }
         pipeline.Destroy();
         renderPass.DestroyRenderPass();
         surface.DestroySurface();
@@ -293,7 +312,7 @@ public:
     void initVulkan() {
         renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
                                     RenderPassType::FORWARD);
-        depthResource.createDepthResources(device, swapChain.extent, msaaSamples,swapChain.swapChainImages.size());
+        depthResource.createDepthResources(device, swapChain.extent, msaaSamples, swapChain.swapChainImages.size());
         //创建交换链的帧缓冲
         for (size_t i = 0; i < swapChain.swapChainImages.size(); i++) {
             VK::Render::FrameBuffer framebuffer{};
@@ -320,7 +339,7 @@ public:
             uniformBuffer.buffer.Map();
         }
         syncManager.createSyncObjects(device, MAX_FRAMES_IN_FLIGHT * 1, MAX_FRAMES_IN_FLIGHT * 2
-            );
+        );
         descriptorManager.initialManager(device.vkDevice);
         descriptorManager.setSampler(model.sampler.sampler);
         for (const auto &uniformBuffer: uniformBuffers) {
@@ -340,14 +359,76 @@ public:
                 .createPipeline(swapChain, descriptorManager
                                 , renderPass.m_renderPass);
         //创建颜色附件
+        colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
+                                           swapChain.swapChainImages.size());
+
 
         //创建MSAA帧缓冲
 
 
         //参数：
         maxMsaaSamples = Utils::getMaxUsableSampleCount(device.physicalDevice);
-
     }
+
+    void recreateRenderResource(RenderType currentRenderType) {
+            if(renderType == RenderType::MSAA){
+                msaaSamples = maxMsaaSamples;
+                vkDeviceWaitIdle(device.vkDevice);
+                cleanupSwapChain();
+                renderPass.DestroyRenderPass();
+                pipeline.Destroy();
+                swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
+                                            RenderPassType::MSAA);
+                depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
+                                                   swapChain.swapChainImages.size());
+                colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
+                                                   swapChain.swapChainImages.size());
+                for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                    std::vector<VkImageView> attachments{};
+                    attachments.push_back(colorResource.getImageViews()[i]);
+                    attachments.push_back(depthResource.getImageViews()[i]);
+                    attachments.push_back(swapChain.swapChainImageViews[i]);
+                    presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+                }
+                pipeline.initial(device.vkDevice).
+                        setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
+                        .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+                        .setRasterizerState()
+                        .setMultisampleState(msaaSamples)
+                        .setColorBlendState().setDepthStencilState()
+                        .createPipeline(swapChain, descriptorManager
+                                        , renderPass.m_renderPass);
+            }
+            if(renderType == RenderType::NORMAL){
+                msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+                vkDeviceWaitIdle(device.vkDevice);
+                cleanupSwapChain();
+                renderPass.DestroyRenderPass();
+                pipeline.Destroy();
+
+                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,
+                                            RenderPassType::FORWARD);
+                swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+                depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
+                                                   swapChain.swapChainImages.size());
+                for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                    std::vector<VkImageView> attachments{};
+                    attachments.push_back(swapChain.swapChainImageViews[i]);
+                    attachments.push_back(depthResource.getImageViews()[i]);
+                    presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+                }
+                pipeline.initial(device.vkDevice).
+                        setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
+                        .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+                        .setRasterizerState()
+                        .setMultisampleState(msaaSamples)
+                        .setColorBlendState().setDepthStencilState()
+                        .createPipeline(swapChain, descriptorManager
+                                        , renderPass.m_renderPass);
+            }
+    }
+
 
     void createWindow() {
         glfwInit();
@@ -375,8 +456,7 @@ public:
             app->lastX = xpos;
             app->lastY = ypos;
             app->myCamera.ProcessMouseMovement(xoffset, yoffset);
-        }
-        else {
+        } else {
             app->firstMouse = true;
         }
     }

@@ -145,6 +145,7 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
         }
     }
     if (renderPassType == RenderPassType::MSAA) {
+        sampleCount = VK_SAMPLE_COUNT_8_BIT;
         setAttachmentDescription({
             .flags = 0, // 显式初始化可选字段
             .format = swapchainImageFormat,
@@ -154,7 +155,7 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, // 调整到正确位置
-            .finalLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL //颜色附件
+            .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL //颜色附件
         });
 
         setAttachmentReference({
@@ -186,7 +187,7 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, // 调整到正确位置
+            .initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // 调整到正确位置
             .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR //渲染至屏幕
         });
 
@@ -202,14 +203,14 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
             .pDepthStencilAttachment = &attachmentReferences[1]
         });
         setSubpassDependency({
-    .srcSubpass = VK_SUBPASS_EXTERNAL,
-    .dstSubpass = 0,
-    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // StageMask在前
-    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    .srcAccessMask = 0,
-    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-    .dependencyFlags = 0 // 显式初始化可选字段
-});
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // StageMask在前
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = 0 // 显式初始化可选字段
+        });
 
         VkRenderPassCreateInfo renderPassInfo = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -237,6 +238,10 @@ void VK::Render::RenderPass::setMsaaCount(VkSampleCountFlagBits msaaCount) {
     this->sampleCount = msaaCount;
 }
 
-void VK::Render::RenderPass::DestroyRenderPass() const {
+void VK::Render::RenderPass::DestroyRenderPass()  {
+    this->attachments.clear();
+    this->subpassDependencies.clear();
+    this->attachmentReferences.clear();
+    this->subpass.clear();
     vkDestroyRenderPass(device, m_renderPass, nullptr);
 }

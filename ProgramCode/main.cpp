@@ -3,25 +3,36 @@
 
 class AppInstance {
 public:
-    RenderInstance* renderInstance = RenderInstance::getInstance();
-    GUI::imguiDraw* imguiDrawInstance = new GUI::imguiDraw();
+    RenderInstance *renderInstance = RenderInstance::getInstance();
+    GUI::imguiDraw *imguiDrawInstance = new GUI::imguiDraw();
+
+
     ~AppInstance() {
         delete imguiDrawInstance;
         renderInstance->cleanup();
         delete renderInstance;
     }
+
 public:
-    void run() const{
+    void run() const {
         renderInstance->initVulkan();
         mainLoop();
     }
-    void mainLoop() const{
+
+    void mainLoop() const {
         double lastFrame = glfwGetTime();
         double timeForComputeFrame = glfwGetTime();
         int frameCount = 0;
+        RenderType lastRenderType = renderInstance->renderType;
         while (!glfwWindowShouldClose(renderInstance->window)) {
             glfwPollEvents();
-
+            RenderType currentRenderType = renderInstance->renderType;
+            if (currentRenderType != lastRenderType) {
+                renderInstance->recreateRenderResource(currentRenderType);
+                imguiDrawInstance->recreateFrameBuffers();
+                lastRenderType = currentRenderType;
+                continue;
+            }
             imguiDrawInstance->BeginRender();
             imguiDrawInstance->DrawUI();
             auto result = renderInstance->getAvaliableImageIndex();
@@ -42,15 +53,15 @@ public:
                 renderInstance->recreateSwapChain();
                 imguiDrawInstance->recreateFrameBuffers();
                 continue;
-            } else
-                if (result != VK_SUCCESS) {
-                    throw std::runtime_error("failed to present swap chain image!");
-                }
+            } else if (result != VK_SUCCESS) {
+                throw std::runtime_error("failed to present swap chain image!");
+            }
             frameCount++;
             double currentFrame = glfwGetTime();
             double deltaTime = currentFrame - lastFrame;
             double addTime = currentFrame - timeForComputeFrame;
-            RenderInstance::processInput(renderInstance->window, deltaTime, renderInstance->myCamera, renderInstance->mouseFlag);
+            RenderInstance::processInput(renderInstance->window, deltaTime, renderInstance->myCamera,
+                                         renderInstance->mouseFlag);
             if (addTime >= 1.0f) {
                 renderInstance->currentFPS = frameCount / addTime;
                 frameCount = 0;
@@ -58,13 +69,10 @@ public:
             }
             lastFrame = currentFrame;
             renderInstance->currentFrame = (renderInstance->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+            lastRenderType = currentRenderType;
         }
-        vkDeviceWaitIdle(renderInstance->device.vkDevice); //保证所有资源同步可以正确删除
-
+            vkDeviceWaitIdle(renderInstance->device.vkDevice); //保证所有资源同步可以正确删除
     }
-
-
-
 };
 
 

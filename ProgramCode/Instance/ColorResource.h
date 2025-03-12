@@ -10,9 +10,13 @@ namespace VK::Instances {
     class ColorResource {
     public:
         std::vector<Image> colorImages = {};
-        void createColorResources(const VK::Device& device, const VkExtent2D& extent,const uint32_t& depthBufferNum);
+        void createColorResources(const VK::Device& device, const VkExtent2D& extent,const VkFormat& colorFormat,
+            const VkSampleCountFlagBits& msaaCount,const uint32_t& colorBufferNum);
         void destroyColorResources() const;
         std::vector<VkImageView> getImageViews() const;
+
+    private:
+        VkDevice device{};
     };
 }
 
