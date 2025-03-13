@@ -158,7 +158,7 @@ public:
         scissor.offset = {0, 0};
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                pipeline.m_pipelineLayout, 0, 1,
+                                pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
         VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera);
         for (auto i = 0; i < model.meshes.size(); i++) {
@@ -168,7 +168,7 @@ public:
             vkCmdBindIndexBuffer(commandBuffer, model.meshes[i].indexBuffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
             //加载模型中的顶点
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pipeline.m_pipelineLayout, 1, 1,
+                                    pipeline.pipelineLayout, 1, 1,
                                     &descriptorManager.textureDescriptorSets[i], 0, nullptr);
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model.meshes[i].indices.size()), 1, 0, 0, 0);
             //后面的参数用来对齐索引和顶点
@@ -328,11 +328,7 @@ public:
 
         commandBufferManager.createCommandBuffers(device, 2);
 
-        model.LoadModel(device, MODEL_PATH, ModelType::OBJ);
-        model.createSampler(device);
-        model.createModelIndexBuffer(device, commandBufferManager.commandPool);
-        model.createModelVertexBuffer(device, commandBufferManager.commandPool);
-        model.createModelTextureImage(device, commandBufferManager.commandPool);
+        model.LoadModel(device, MODEL_PATH, ModelType::OBJ, commandBufferManager.commandPool);
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         for (auto &uniformBuffer: uniformBuffers) {
             uniformBuffer.buffer.createBuffer(device, sizeof(UniformBufferObject),

@@ -70,7 +70,7 @@ void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
     // pipelineLayoutInfo.pSetLayouts = nullptr;
 
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -86,7 +86,7 @@ void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
     pipelineInfo.pDepthStencilState = &depthStencilInfo;
     pipelineInfo.pColorBlendState = &colorBlendStateCreateInfo;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = m_pipelineLayout;
+    pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -211,7 +211,7 @@ VK::Render::Pipeline& VK::Render::Pipeline::setColorBlendState() {
 void VK::Render::Pipeline::Destroy() {
     this->shaderStages.clear();
     this->shaders.clear();
-    vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyPipeline(device, m_pipeline, nullptr);
 }
 

@@ -13,7 +13,8 @@
 #include "../Utils/utils.h"
 
 
-void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string &path, ModelType type) {
+void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string &path, ModelType type, const VkCommandPool &commandPool) {
+    descriptorManager.initialManager(device.vkDevice);
     if (type == ModelType::OBJ) {
         objl::Loader loader;
         bool loadSuccess = loader.LoadFile(path);
@@ -44,6 +45,12 @@ void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string
                 meshes.push_back(_mesh);
             }
         }
+        this->createSampler(device);
+        this->createModelIndexBuffer(device, commandPool);
+        this->createModelTextureImage(device, commandPool);
+        this->createModelVertexBuffer(device, commandPool);
+        descriptorManager.setSampler(sampler.sampler);
+        descriptorManager.createSets();
     }
     if (type == ModelType::glTF) {
         // 初始化模型加载器
@@ -58,25 +65,6 @@ void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string
         if (!warn.empty()) std::cout << "警告: " << warn << std::endl;
         if (!err.empty()) std::cerr << "错误: " << err << std::endl;
         if (!ret) throw std::runtime_error("加载GLB失败");
-        for (const auto& meshes: model.meshes) {
-            for(const auto& mesh : meshes) {
-                for (const auto& primitive: mesh.primitives) {
-                    const auto accessorIndex = model.accessors[primitive.index];//索引查找器
-                    const auto accessorVertex = model.accessors[primitive.vertex];
-                    const auto accessorNormal = model.accessors[primitive.normal];
-                    const auto accessorTexCoord = model.accessors[primitive.texcoord];
-                    const auto bufferViewIndex = model.bufferViews[accessorIndex.bufferView];
-                    const auto bufferViewVertex = model.bufferViews[accessorVertex.bufferView];
-                    const auto bufferViewNormal = model.bufferViews[accessorNormal.bufferView];
-                    const auto bufferViewTexCoord = model.bufferViews[accessorTexCoord.bufferView];
-                    const auto indexBuffer = model.buffers[bufferViewIndex.buffer];
-                    const auto vertexBuffer = model.buffers[bufferViewVertex.buffer];
-                    const auto normalBuffer = model.buffers[bufferViewNormal.buffer];
-                    const auto texCoordBuffer = model.buffers[bufferViewTexCoord.buffer];
-                }
-            }
-        }
-
     }
 }
 
@@ -163,8 +151,13 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
         stagingBuffer.destroyBuffer();
         mesh.texture.image.imageView = Utils::createImageView(device.vkDevice, mesh.texture.image.image,
                                                               VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        descriptorManager.setImageView(mesh.texture.image.imageView);
     }
+    descriptorManager.setMaxSets(meshes.size());
 }
+
+
+
 
 void VK::Instances::Model::destroy() {
     for (auto &mesh: meshes) {
