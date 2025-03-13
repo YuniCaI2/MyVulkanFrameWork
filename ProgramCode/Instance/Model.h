@@ -14,10 +14,13 @@
 #include "VertexBuffer.h"
 
 enum class ModelType {
-    OBJ
+    OBJ,
+    glTF
 };
 
+
 namespace VK::Instances {
+
 
     struct Mesh {
         std::vector<Vertex> vertices;
@@ -35,6 +38,11 @@ namespace VK::Instances {
         Sampler sampler{};
         std::vector<Mesh> meshes{};
         glm::mat4 modelMatrix{};
+    private:
+        VK::Device device{};
+
+    public:
+
         void LoadModel(const VK::Device& device,const std::string& path, ModelType type);
         void createSampler(const VK::Device& device);
         void createModelVertexBuffer(const VK::Device& device, const VkCommandPool& commandPool);

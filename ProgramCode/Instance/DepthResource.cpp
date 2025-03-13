@@ -15,7 +15,7 @@ void VK::Instances::DepthResource::createDepthResources(const VK::Device &device
     depthImages.reserve(depthBufferNum);
     for (uint32_t i = 0; i < depthBufferNum; i++) {
         VK::Instances::Image depthImage;
-        depthImage.createImage(device, extent.width, extent.height, 1,
+        depthImage.createImage(device, extent.width, extent.height, 1,1,
             samples, depthFormat,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,

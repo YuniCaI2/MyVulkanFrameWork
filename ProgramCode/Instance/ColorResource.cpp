@@ -13,7 +13,7 @@ void VK::Instances::ColorResource::createColorResources(const VK::Device &device
     colorImages.reserve(colorBufferNum);
     for (uint32_t i = 0; i < colorBufferNum; i++) {
         VK::Instances::Image colorImage;
-        colorImage.createImage(device, extent.width, extent.height, 1,
+        colorImage.createImage(device, extent.width, extent.height, 1,1,
                                msaaCount, colorFormat,
                                VK_IMAGE_TILING_OPTIMAL,
                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
