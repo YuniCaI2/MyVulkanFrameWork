@@ -108,7 +108,6 @@ public:
     VK::Instances::ColorResource colorResource{};
 
 public:
-
     void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -277,7 +276,7 @@ public:
         for (const auto &framebuffer: presentFrameBuffers) {
             framebuffer.destroyFrameBuffers();
         }
-        if(renderType == RenderType::MSAA) {
+        if (renderType == RenderType::MSAA) {
             colorResource.destroyColorResources();
         }
         depthResource.destroyDepthResources();
@@ -295,7 +294,7 @@ public:
         descriptorManager.destroy();
         cleanupSwapChain();
 
-        if(! (RenderType::MSAA == renderType)) {
+        if (!(RenderType::MSAA == renderType)) {
             colorResource.destroyColorResources();
             //保证删除color Resource
         }
@@ -310,7 +309,7 @@ public:
     }
 
     void initVulkan() {
-        renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,msaaSamples,
+        renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format, msaaSamples,
                                     RenderPassType::FORWARD);
         depthResource.createDepthResources(device, swapChain.extent, msaaSamples, swapChain.swapChainImages.size());
         //创建交换链的帧缓冲
@@ -351,8 +350,11 @@ public:
                 .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
                 .setRasterizerState()
                 .setMultisampleState()
-                .setColorBlendState().setDepthStencilState()
-                .createPipeline(swapChain, descriptorManager
+                .setColorBlendState().setDepthStencilState().createPipelineLayout(
+                    {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                    NULL,NULL
+                )
+                .createPipeline(swapChain
                                 , renderPass.m_renderPass);
         //创建颜色附件用于MSAA
         colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
@@ -362,62 +364,67 @@ public:
     }
 
     void recreateRenderResource(RenderType currentRenderType) {
-            if(renderType == RenderType::MSAA){
-                msaaSamples = maxMsaaSamples;
-                vkDeviceWaitIdle(device.vkDevice);
-                cleanupSwapChain();
-                renderPass.DestroyRenderPass();
-                pipeline.Destroy();
-                swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
-                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,msaaSamples,
-                                            RenderPassType::MSAA);
-                depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
-                                                   swapChain.swapChainImages.size());
-                colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
-                                                   swapChain.swapChainImages.size());
-                for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
-                    std::vector<VkImageView> attachments{};
-                    attachments.push_back(colorResource.getImageViews()[i]);
-                    attachments.push_back(depthResource.getImageViews()[i]);
-                    attachments.push_back(swapChain.swapChainImageViews[i]);
-                    presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
-                }
-                pipeline.initial(device.vkDevice).
-                        setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
-                        .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
-                        .setRasterizerState()
-                        .setMultisampleState(msaaSamples)
-                        .setColorBlendState().setDepthStencilState()
-                        .createPipeline(swapChain, descriptorManager
-                                        , renderPass.m_renderPass);
+        if (renderType == RenderType::MSAA) {
+            msaaSamples = maxMsaaSamples;
+            vkDeviceWaitIdle(device.vkDevice);
+            cleanupSwapChain();
+            renderPass.DestroyRenderPass();
+            pipeline.Destroy();
+            swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+            renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format, msaaSamples,
+                                        RenderPassType::MSAA);
+            depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
+                                               swapChain.swapChainImages.size());
+            colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
+                                               swapChain.swapChainImages.size());
+            for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                std::vector<VkImageView> attachments{};
+                attachments.push_back(colorResource.getImageViews()[i]);
+                attachments.push_back(depthResource.getImageViews()[i]);
+                attachments.push_back(swapChain.swapChainImageViews[i]);
+                presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
-            if(renderType == RenderType::NORMAL){
-                msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-                vkDeviceWaitIdle(device.vkDevice);
-                cleanupSwapChain();
-                renderPass.DestroyRenderPass();
-                pipeline.Destroy();
+            pipeline.initial(device.vkDevice).
+                    setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+                    .setRasterizerState()
+                    .setMultisampleState(msaaSamples)
+                    .setColorBlendState().setDepthStencilState().createPipelineLayout(
+                        {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                        NULL,NULL
+                    )
+                    .createPipeline(swapChain, renderPass.m_renderPass);
+        }
+        if (renderType == RenderType::NORMAL) {
+            msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+            vkDeviceWaitIdle(device.vkDevice);
+            cleanupSwapChain();
+            renderPass.DestroyRenderPass();
+            pipeline.Destroy();
 
-                swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
-                renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format,msaaSamples,
-                                            RenderPassType::FORWARD);
-                depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
-                                                   swapChain.swapChainImages.size());
-                for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
-                    std::vector<VkImageView> attachments{};
-                    attachments.push_back(swapChain.swapChainImageViews[i]);
-                    attachments.push_back(depthResource.getImageViews()[i]);
-                    presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
-                }
-                pipeline.initial(device.vkDevice).
-                        setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
-                        .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
-                        .setRasterizerState()
-                        .setMultisampleState(msaaSamples)
-                        .setColorBlendState().setDepthStencilState()
-                        .createPipeline(swapChain, descriptorManager
-                                        , renderPass.m_renderPass);
+            swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+            renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format, msaaSamples,
+                                        RenderPassType::FORWARD);
+            depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
+                                               swapChain.swapChainImages.size());
+            for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                std::vector<VkImageView> attachments{};
+                attachments.push_back(swapChain.swapChainImageViews[i]);
+                attachments.push_back(depthResource.getImageViews()[i]);
+                presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
+            pipeline.initial(device.vkDevice).
+                    setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+                    .setRasterizerState()
+                    .setMultisampleState(msaaSamples)
+                    .setColorBlendState().setDepthStencilState()
+                    .createPipelineLayout(
+                        {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                        NULL,NULL
+                    )
+                    .createPipeline(swapChain, renderPass.m_renderPass);
+        }
     }
 
 

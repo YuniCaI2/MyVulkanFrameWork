@@ -24,7 +24,6 @@ namespace VK::Render {
             Pipeline& initial(const VkDevice& device);
             VkPipeline m_pipeline{};
             void createPipeline( const SwapChain& swapChain,
-                const Instances::DescriptorManager& descriptorManager,
                 const VkRenderPass& renderPass);
             Pipeline& setShader(const std::string& path, ShaderStage stage);
             Pipeline& setRasterizerState(
@@ -47,6 +46,11 @@ namespace VK::Render {
             const VkBool32& alphaToCoverageEnable = VK_FALSE,
             const VkBool32& alphaToOneEnable = VK_FALSE
             );
+            Pipeline& createPipelineLayout(
+            const std::vector<VkDescriptorSetLayout>& pSetLayouts,
+            const VkShaderStageFlags& setShaderStages,
+            const uint32_t& size
+                );
             Pipeline& setDepthStencilState();
             Pipeline& setColorBlendState();
             void Destroy();

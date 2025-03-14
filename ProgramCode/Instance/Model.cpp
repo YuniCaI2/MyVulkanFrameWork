@@ -160,6 +160,7 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
 
 
 void VK::Instances::Model::destroy() {
+    descriptorManager.destroy();
     for (auto &mesh: meshes) {
         mesh.indexBuffer.buffer.destroyBuffer();
         mesh.vertexBuffer.buffer.destroyBuffer();

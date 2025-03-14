@@ -11,13 +11,12 @@ std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_SCISSOR
 };
 
-VK::Render::Pipeline & VK::Render::Pipeline::initial(const VkDevice& device) {
+VK::Render::Pipeline &VK::Render::Pipeline::initial(const VkDevice &device) {
     this->device = device;
     return *this;
 }
 
-void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
-                                          const Instances::DescriptorManager& descriptorManager, const VkRenderPass& renderPass) {
+void VK::Render::Pipeline::createPipeline(const SwapChain &swapChain, const VkRenderPass &renderPass) {
     this->swapChain = swapChain;
     VkPipelineDynamicStateCreateInfo dynamicState = setDynamicState();
     //设置顶点布局
@@ -30,14 +29,15 @@ void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
     vertexInputInfo.vertexBindingDescriptionCount = 1; // 表示顶点绑定描述符的数量
     //  因为顶点被硬编码在顶点着色器的文件中了，所以此处不需要加载顶点数据
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional 是一个指向顶点绑定描述符数组的指针
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size()); // 表示顶点属性描述符的数量(可以对应openGL中的顶点布局)
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
+    // 表示顶点属性描述符的数量(可以对应openGL中的顶点布局)
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data(); // Optional
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     //这里标注绘制的是三角形，每三个顶点一个三角形，且不能重复
-    inputAssembly.primitiveRestartEnable = VK_FALSE;//这里指的是是否使用原始重启，这里是FALSE
+    inputAssembly.primitiveRestartEnable = VK_FALSE; //这里指的是是否使用原始重启，这里是FALSE
 
     VkViewport viewport = {};
     viewport.x = 0.0f;
@@ -57,22 +57,22 @@ void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
     viewportState.viewportCount = 1;
     viewportState.scissorCount = 1;
 
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {descriptorManager.uniformDescriptorSetLayout,
-        descriptorManager.textureDescriptorSetLayout};
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
-    pipelineLayoutInfo.pushConstantRangeCount = 0;//先不使用常量推送
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-    // pipelineLayoutInfo.setLayoutCount = 0;
-    // pipelineLayoutInfo.pSetLayouts = nullptr;
-
-
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create pipeline layout!");
-    }
+    // std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {descriptorManager.uniformDescriptorSetLayout,
+    //     descriptorManager.textureDescriptorSetLayout};
+    //
+    // VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    // pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    // pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+    // pipelineLayoutInfo.pushConstantRangeCount = 1;//先不使用常量推送
+    // pipelineLayoutInfo.pPushConstantRanges = nullptr;
+    // pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+    // // pipelineLayoutInfo.setLayoutCount = 0;
+    // // pipelineLayoutInfo.pSetLayouts = nullptr;
+    //
+    //
+    // if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    //     throw std::runtime_error("failed to create pipeline layout!");
+    // }
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -90,41 +90,43 @@ void VK::Render::Pipeline::createPipeline( const SwapChain& swapChain,
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.basePipelineIndex = -1;//没有派生管线
+    pipelineInfo.basePipelineIndex = -1; //没有派生管线
 
-    if(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
 
-
-    for (const auto& shader : shaders) {
+    for (const auto &shader: shaders) {
         shader.DestroyShaderModule();
     }
 }
 
-VK::Render::Pipeline& VK::Render::Pipeline::setShader(const std::string& path, ShaderStage stage) {
+VK::Render::Pipeline &VK::Render::Pipeline::setShader(const std::string &path, ShaderStage stage) {
     if (stage == ShaderStage::VERT) {
         Shader shader{device, path, VK_SHADER_STAGE_VERTEX_BIT};
         shaders.emplace_back(shader);
         shaderStages.push_back(shader.getPipelineShaderStageCreateInfo());
         return *this;
-    }
-    else if (stage == ShaderStage::FRAG) {
+    } else if (stage == ShaderStage::FRAG) {
         Shader shader{device, path, VK_SHADER_STAGE_FRAGMENT_BIT};
         shaders.emplace_back(shader);
         shaderStages.push_back(shader.getPipelineShaderStageCreateInfo());
         return *this;
-    }
-    else {
+    } else {
         throw std::runtime_error("Invalid shader stage");
     }
 }
 
-VK::Render::Pipeline& VK::Render::Pipeline::setRasterizerState(const VkBool32 &rasterizerDiscardEnable,
-    const VkPolygonMode &polygonMode, const VkCullModeFlags &cullMode, const VkFrontFace &frontFace,
-    const float &lineWidth, const VkBool32 &depthBiasEnable, const float &depthBiasConstantFactor,
-    const float &depthBiasClamp, const float &depthBiasSlopeFactor, const VkBool32 &depthClampEnable) {
+VK::Render::Pipeline &VK::Render::Pipeline::setRasterizerState(const VkBool32 &rasterizerDiscardEnable,
+                                                               const VkPolygonMode &polygonMode,
+                                                               const VkCullModeFlags &cullMode,
+                                                               const VkFrontFace &frontFace,
+                                                               const float &lineWidth, const VkBool32 &depthBiasEnable,
+                                                               const float &depthBiasConstantFactor,
+                                                               const float &depthBiasClamp,
+                                                               const float &depthBiasSlopeFactor,
+                                                               const VkBool32 &depthClampEnable) {
     rasterizerInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizerInfo.depthClampEnable = depthClampEnable;
     rasterizerInfo.rasterizerDiscardEnable = rasterizerDiscardEnable;
@@ -139,9 +141,12 @@ VK::Render::Pipeline& VK::Render::Pipeline::setRasterizerState(const VkBool32 &r
     return *this;
 }
 
-VK::Render::Pipeline& VK::Render::Pipeline::setMultisampleState(const VkSampleCountFlagBits &sampleCount,
-    const VkBool32 &sampleShadingEnable, const float &minSampleShading, const VkSampleMask *pSamplerMask,
-    const VkBool32 &alphaToCoverageEnable, const VkBool32 &alphaToOneEnable) {
+VK::Render::Pipeline &VK::Render::Pipeline::setMultisampleState(const VkSampleCountFlagBits &sampleCount,
+                                                                const VkBool32 &sampleShadingEnable,
+                                                                const float &minSampleShading,
+                                                                const VkSampleMask *pSamplerMask,
+                                                                const VkBool32 &alphaToCoverageEnable,
+                                                                const VkBool32 &alphaToOneEnable) {
     multisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisamplingInfo.sampleShadingEnable = sampleShadingEnable;
     multisamplingInfo.rasterizationSamples = sampleCount;
@@ -152,7 +157,36 @@ VK::Render::Pipeline& VK::Render::Pipeline::setMultisampleState(const VkSampleCo
     return *this;
 }
 
-VK::Render::Pipeline& VK::Render::Pipeline::setDepthStencilState() {
+VK::Render::Pipeline &VK::Render::Pipeline::createPipelineLayout(const std::vector<VkDescriptorSetLayout> &SetLayouts,
+                                                                 const VkShaderStageFlags &setShaderStages,
+                                                                 const uint32_t &size) {
+    VkPushConstantRange pushConstantRange = {};
+    pushConstantRange.size = size;
+    pushConstantRange.stageFlags = setShaderStages;
+    pushConstantRange.offset = 0;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    if (setShaderStages == NULL) {
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
+        pipelineLayoutInfo.pushConstantRangeCount = 0; //先不使用常量推送
+        pipelineLayoutInfo.pPushConstantRanges = nullptr;
+        pipelineLayoutInfo.pSetLayouts = SetLayouts.data();
+    } else {
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
+        pipelineLayoutInfo.pushConstantRangeCount = 1; //先不使用常量推送
+        pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+        pipelineLayoutInfo.pSetLayouts = SetLayouts.data();
+    }
+
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+    return *this;
+}
+
+VK::Render::Pipeline &VK::Render::Pipeline::setDepthStencilState() {
     VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
     depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencilState.depthTestEnable = VK_TRUE;
@@ -172,15 +206,14 @@ VK::Render::Pipeline& VK::Render::Pipeline::setDepthStencilState() {
     depthStencilInfo = depthStencilState;
 
     return *this;
-
-
 }
 
-VK::Render::Pipeline& VK::Render::Pipeline::setColorBlendState() {
+VK::Render::Pipeline &VK::Render::Pipeline::setColorBlendState() {
     //2025.02.28 中此处设置默认不调用
     //颜色混合
-    VkPipelineColorBlendAttachmentState  colorBlendAttachment = {};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+                                          | VK_COLOR_COMPONENT_A_BIT;
     //这里设置保留所有分量
     colorBlendAttachment.blendEnable = VK_FALSE;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -204,8 +237,6 @@ VK::Render::Pipeline& VK::Render::Pipeline::setColorBlendState() {
 
     colorBlendStateCreateInfo = colorBlending;
     return *this;
-
-
 }
 
 void VK::Render::Pipeline::Destroy() {
@@ -215,7 +246,7 @@ void VK::Render::Pipeline::Destroy() {
     vkDestroyPipeline(device, m_pipeline, nullptr);
 }
 
-VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState(){
+VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState() {
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -223,4 +254,3 @@ VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState(){
     return dynamicState;
     //动态设置
 }
-
