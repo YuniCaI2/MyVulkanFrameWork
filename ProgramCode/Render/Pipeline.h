@@ -6,7 +6,6 @@
 #define PIPELINE_H
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include <string>
 #include "./Shader.h"
 #include "../Instance/DescriptorManager.h"
 #include "../Presentation/SwapChain.h"

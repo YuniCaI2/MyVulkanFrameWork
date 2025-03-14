@@ -39,6 +39,7 @@ namespace VK::Instances {
         ModelType modelType{};
         Sampler sampler{};
         std::vector<Mesh> meshes{};
+        glm::mat4 modelMatrix{};
         VK::Instances::DescriptorManager descriptorManager{};
     private:
 

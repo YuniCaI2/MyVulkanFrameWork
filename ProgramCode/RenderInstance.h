@@ -157,18 +157,19 @@ public:
                                 pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
         VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera);
-        for (auto i = 0; i < model.meshes.size(); i++) {
-            VkBuffer vertexBuffers[] = {model.meshes[i].vertexBuffer.buffer.buffer};
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(commandBuffer, model.meshes[i].indexBuffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-            //加载模型中的顶点
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pipeline.pipelineLayout, 1, 1,
-                                    &descriptorManager.textureDescriptorSets[i], 0, nullptr);
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model.meshes[i].indices.size()), 1, 0, 0, 0);
-            //后面的参数用来对齐索引和顶点
-        }
+        model.draw(commandBuffer, pipeline.pipelineLayout);
+        // for (auto i = 0; i < model.meshes.size(); i++) {
+        //     VkBuffer vertexBuffers[] = {model.meshes[i].vertexBuffer.buffer.buffer};
+        //     VkDeviceSize offsets[] = {0};
+        //     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        //     vkCmdBindIndexBuffer(commandBuffer, model.meshes[i].indexBuffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        //     //加载模型中的顶点
+        //     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        //                             pipeline.pipelineLayout, 1, 1,
+        //                             &descriptorManager.textureDescriptorSets[i], 0, nullptr);
+        //     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model.meshes[i].indices.size()), 1, 0, 0, 0);
+        //     //后面的参数用来对齐索引和顶点
+        // }
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
@@ -352,7 +353,7 @@ public:
                 .setMultisampleState()
                 .setColorBlendState().setDepthStencilState().createPipelineLayout(
                     {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                    NULL,NULL
+                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,sizeof(glm::mat4)
                 )
                 .createPipeline(swapChain
                                 , renderPass.m_renderPass);
@@ -391,7 +392,7 @@ public:
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState().createPipelineLayout(
                         {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                        NULL,NULL
+                        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass);
         }
@@ -421,7 +422,7 @@ public:
                     .setColorBlendState().setDepthStencilState()
                     .createPipelineLayout(
                         {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                        NULL,NULL
+                        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass);
         }

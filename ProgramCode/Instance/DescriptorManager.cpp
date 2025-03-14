@@ -65,7 +65,7 @@ void VK::Instances::DescriptorManager::createSets() {
         VkWriteDescriptorSet uniformBufferWriteInfo = {};
         uniformBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         uniformBufferWriteInfo.dstSet = uniformDescriptorSets[i];
-        uniformBufferWriteInfo.dstBinding = 0;
+        uniformBufferWriteInfo.dstBinding = 0;//这边是为了Mac绑定,一个Sets就一个描述符为了方便
         uniformBufferWriteInfo.descriptorCount = 1;
         uniformBufferWriteInfo.dstArrayElement = 0;
         uniformBufferWriteInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -116,7 +116,7 @@ void VK::Instances::DescriptorManager::createSetLayouts() {
     }
 
     VkDescriptorSetLayoutBinding uboLayoutBinding{}; //描述绑定信息
-    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.binding = 0;//通上dstBinding
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboLayoutBinding.descriptorCount = 1;
 

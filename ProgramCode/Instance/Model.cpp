@@ -16,6 +16,7 @@
 void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string &path, ModelType type, const VkCommandPool &commandPool) {
     descriptorManager.initialManager(device.vkDevice);
     if (type == ModelType::OBJ) {
+        modelMatrix = glm::mat4(1.0f);
         modelType = ModelType::OBJ;
         objl::Loader loader;
         bool loadSuccess = loader.LoadFile(path);
@@ -157,6 +158,9 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
 
 void VK::Instances::Model::draw(const VkCommandBuffer &commandBuffer, const VkPipelineLayout &pipelineLayout) {
     if (modelType == ModelType::OBJ) {
+
+        vkCmdPushConstants(commandBuffer, pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &modelMatrix);
         for (auto i = 0; i < meshes.size(); i++) {
             VkBuffer vertexBuffers[] = {meshes[i].vertexBuffer.buffer.buffer};
             VkDeviceSize offsets[] = {0};

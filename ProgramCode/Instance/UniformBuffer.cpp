@@ -12,15 +12,15 @@ void VK::Instances::UniformBuffer::update(const UniformBuffer &uniformBuffer, co
     const Camera& camera) {
 
     UniformBufferObject ubo = {};
-    ubo.model = glm::mat4(1.0f);
-    ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, -5.0f));
-    // ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0, 1.0, 0.0f));
-    // ubo.view = glm::lookAt(glm::vec3(0.0f,2.0f,2.0f),
-    //     glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    // ubo.model = glm::mat4(1.0f);
+    // ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, -5.0f));
+
+    ubo.viewPos = camera.Position;//相机坐标
+
     ubo.view = camera.GetViewMatrix();
     ubo.proj = glm::perspective(glm::radians(camera.Zoom),
         static_cast<float>(extent.width) / static_cast<float>(extent.height), 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1 ;
+    ubo.proj[1][1] *= -1;
     //因为glm是为opengl设计的，在opengl中，y轴朝下才是正的，Vulkan是反过来的。
     memcpy(uniformBuffer.buffer.data, &ubo, sizeof(ubo));
     //前一个参数是映射内存的指针
