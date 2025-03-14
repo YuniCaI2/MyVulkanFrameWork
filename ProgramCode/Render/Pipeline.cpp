@@ -166,19 +166,12 @@ VK::Render::Pipeline &VK::Render::Pipeline::createPipelineLayout(const std::vect
     pushConstantRange.offset = 0;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    if (size == NULL) {
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
-        pipelineLayoutInfo.pushConstantRangeCount = 0; //先不使用常量推送
-        pipelineLayoutInfo.pPushConstantRanges = nullptr;
-        pipelineLayoutInfo.pSetLayouts = SetLayouts.data();
-    } else {
+
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
         pipelineLayoutInfo.pSetLayouts = SetLayouts.data();
-    }
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");

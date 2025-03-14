@@ -353,7 +353,7 @@ public:
                 .setMultisampleState()
                 .setColorBlendState().setDepthStencilState().createPipelineLayout(
                     {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,sizeof(glm::mat4)
+                    VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
                 )
                 .createPipeline(swapChain
                                 , renderPass.m_renderPass);
@@ -392,7 +392,7 @@ public:
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState().createPipelineLayout(
                         {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,sizeof(glm::mat4)
+                        VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass);
         }
@@ -422,7 +422,7 @@ public:
                     .setColorBlendState().setDepthStencilState()
                     .createPipelineLayout(
                         {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,sizeof(glm::mat4)
+                        VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass);
         }
