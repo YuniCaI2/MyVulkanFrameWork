@@ -16,6 +16,7 @@
 void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string &path, ModelType type, const VkCommandPool &commandPool) {
     descriptorManager.initialManager(device.vkDevice);
     if (type == ModelType::OBJ) {
+        modelType = ModelType::OBJ;
         objl::Loader loader;
         bool loadSuccess = loader.LoadFile(path);
         if (!loadSuccess) {
@@ -54,6 +55,7 @@ void VK::Instances::Model::LoadModel(const VK::Device &device, const std::string
     }
     if (type == ModelType::glTF) {
         // 初始化模型加载器
+        modelType = ModelType::glTF;
         tinygltf::TinyGLTF loader;
         tinygltf::Model model;
         std::string err, warn;
@@ -75,11 +77,8 @@ void VK::Instances::Model::createSampler(const VK::Device &device) {
 }
 
 void VK::Instances::Model::createModelVertexBuffer(const VK::Device &device, const VkCommandPool &commandPool) {
+
     for (auto &mesh: meshes) {
-        std::cout << "Loaded mesh with " << mesh.vertices.size()
-                << " vertices and " << mesh.indices.size() << " indices.\n";
-
-
         VkDeviceSize size = sizeof(mesh.vertices[0]) * mesh.vertices.size();
         Buffer stagingBuffer{};
         stagingBuffer.createBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -156,7 +155,22 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device &device, con
     descriptorManager.setMaxSets(meshes.size());
 }
 
-
+void VK::Instances::Model::draw(const VkCommandBuffer &commandBuffer, const VkPipelineLayout &pipelineLayout) {
+    if (modelType == ModelType::OBJ) {
+        for (auto i = 0; i < meshes.size(); i++) {
+            VkBuffer vertexBuffers[] = {meshes[i].vertexBuffer.buffer.buffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffer, meshes[i].indexBuffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            //加载模型中的顶点
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pipelineLayout, 1, 1,
+                                    &descriptorManager.textureDescriptorSets[i], 0, nullptr);
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshes[i].indices.size()), 1, 0, 0, 0);
+            //后面的参数用来对齐索引和顶点
+        }
+    }
+}
 
 
 void VK::Instances::Model::destroy() {

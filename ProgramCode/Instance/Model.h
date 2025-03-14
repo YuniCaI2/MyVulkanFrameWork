@@ -36,11 +36,12 @@ namespace VK::Instances {
 
     class Model {
     public:
+        ModelType modelType{};
         Sampler sampler{};
         std::vector<Mesh> meshes{};
-        glm::mat4 modelMatrix{};
         VK::Instances::DescriptorManager descriptorManager{};
     private:
+
         VK::Device device{};
 
     public:
@@ -50,6 +51,7 @@ namespace VK::Instances {
         void createModelVertexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelIndexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelTextureImage(const VK::Device& device, const VkCommandPool& commandPool);
+        void draw(const VkCommandBuffer& commandBuffer, const VkPipelineLayout& pipelineLayout);
         void destroy();
     };
 }
