@@ -108,9 +108,6 @@ public:
     VK::Instances::ColorResource colorResource{};
 
 public:
-    RenderInstance *getPtr() {
-        return this;
-    }
 
     void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
         VkCommandBufferBeginInfo beginInfo = {};
