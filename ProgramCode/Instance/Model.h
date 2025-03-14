@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 
+#include "DescriptorManager.h"
 #include "IndexBuffer.h"
 #include "Sampler.h"
 #include "TextureImage.h"
@@ -14,10 +15,13 @@
 #include "VertexBuffer.h"
 
 enum class ModelType {
-    OBJ
+    OBJ,
+    glTF
 };
 
+
 namespace VK::Instances {
+
 
     struct Mesh {
         std::vector<Vertex> vertices;
@@ -35,7 +39,13 @@ namespace VK::Instances {
         Sampler sampler{};
         std::vector<Mesh> meshes{};
         glm::mat4 modelMatrix{};
-        void LoadModel(const VK::Device& device,const std::string& path, ModelType type);
+        VK::Instances::DescriptorManager descriptorManager{};
+    private:
+        VK::Device device{};
+
+    public:
+
+        void LoadModel(const VK::Device& device,const std::string& path, ModelType type , const VkCommandPool &commandPool);
         void createSampler(const VK::Device& device);
         void createModelVertexBuffer(const VK::Device& device, const VkCommandPool& commandPool);
         void createModelIndexBuffer(const VK::Device& device, const VkCommandPool& commandPool);

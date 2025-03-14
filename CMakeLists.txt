@@ -8,6 +8,10 @@ find_package(Vulkan REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(glfw3 REQUIRED)
 include_directories(${Vulkan_INCLUDE_DIRS})
+add_subdirectory(./libs/tinygltf)
+set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
+set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
+
 
 add_executable(${PROJECT_NAME}
         ProgramCode/main.cpp
@@ -82,11 +86,14 @@ add_executable(${PROJECT_NAME}
         ProgramCode/RenderInstance.h
         ProgramCode/Instance/ColorResource.h
         ProgramCode/Instance/ColorResource.cpp
+        ProgramCode/Instance/Light.cpp
+        ProgramCode/Instance/Light.h
 )
 target_link_libraries(${PROJECT_NAME} glfw)
 
-target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan )
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+target_include_directories(${PROJECT_NAME} PRIVATE "./libs/tinygltf")
 
 
 

@@ -15,25 +15,33 @@ namespace VK::Instances {
         VkImage image{};
         VkImageView imageView{};
         VkDeviceMemory imageMemory{};
-        void* data{nullptr};
+        void *data{nullptr};
+
         void Map();
+
         void UnMap() const;
+
         void destroyImage() const;
+
         void copy(VkBuffer buffer, VkCommandPool commandPool) const;
-        void createImage( const VK::Device& device,
-uint32_t width,uint32_t height,
-uint32_t mipLevels,
-VkSampleCountFlagBits numSamples,
-VkFormat format, VkImageTiling tiling,
-VkImageUsageFlags usage, VkMemoryPropertyFlags properties);
+
+        void createImage(const VK::Device &device,
+                         uint32_t width, uint32_t height,
+                         uint32_t mipLevels,uint32_t arrayNum,
+                         VkSampleCountFlagBits numSamples,
+                         VkFormat format, VkImageTiling tiling,
+                         VkImageUsageFlags usage, VkMemoryPropertyFlags properties);
+
         uint32_t width{};
         uint32_t height{};
+
     private:
+        VkFormat format{};
         VkDeviceSize size{};
+        uint32_t arrayNum{};
         VK::Device device{};
     };
 }
-
 
 
 #endif //IMAGE_H

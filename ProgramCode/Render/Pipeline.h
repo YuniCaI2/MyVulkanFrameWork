@@ -19,9 +19,10 @@ enum class ShaderStage {
 namespace VK::Render {
         class Pipeline {
         public:
+            VkPipelineLayout pipelineLayout{};
+
             Pipeline& initial(const VkDevice& device);
             VkPipeline m_pipeline{};
-            VkPipelineLayout m_pipelineLayout{};
             void createPipeline( const SwapChain& swapChain,
                 const Instances::DescriptorManager& descriptorManager,
                 const VkRenderPass& renderPass);
