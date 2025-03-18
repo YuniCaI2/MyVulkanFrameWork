@@ -5,6 +5,7 @@
 #ifndef UNIFORMBUFFER_H
 #define UNIFORMBUFFER_H
 #include "Buffer.h"
+#include "Light.h"
 #include "../Camera.h"
 
 
@@ -12,7 +13,7 @@ namespace VK::Instances {
     class UniformBuffer {
     public:
         Buffer buffer;
-        static void update(const UniformBuffer& uniformBuffer,const VkExtent2D& extent, const Camera& camera);
+        static void update(const UniformBuffer& uniformBuffer,const VkExtent2D& extent, const Camera& camera, const Light& light);
     };
 }
 

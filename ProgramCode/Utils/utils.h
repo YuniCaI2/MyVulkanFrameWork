@@ -19,7 +19,7 @@ enum class RenderPassType {
 
 namespace Utils {
     VkImageView createImageView(VkDevice device,VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
-     uint32_t mipLevels);
+     uint32_t mipLevels, uint32_t arrayNum);
     std::vector<char> readFile(const std::string& filename);
     VkFormat findSupportedFormat(const VkPhysicalDevice& physicalDevice,const std::vector<VkFormat>& candidates,
     VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -28,7 +28,7 @@ namespace Utils {
     VkCommandBuffer beginSingleTimeCommands(const VK::Device& device,const VkCommandPool& commandPool);
     void endSingleTimeCommands(const VK::Device& device,const VkCommandPool& commandPool,VkCommandBuffer commandBuffer);
     void transitionImageLayout(const VK::Device& device, const VkCommandPool& commandPool,VkImage image, VkFormat format, VkImageLayout oldLayout,
-        VkImageLayout newLayout, uint32_t mipLevels);
+        VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount);
     void checkVkResult(VkResult result);
     VkSampleCountFlagBits getMaxUsableSampleCount(const VkPhysicalDevice& physicalDevice);
 

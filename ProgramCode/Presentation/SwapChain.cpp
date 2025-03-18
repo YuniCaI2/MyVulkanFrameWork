@@ -8,7 +8,7 @@ void VK::SwapChain::createImageViews(VkFormat swapchainFormat) {
     swapChainImageViews.resize(swapChainImages.size());
     for(size_t i = 0; i < swapChainImages.size(); i++) {
         swapChainImageViews[i] = Utils::createImageView(device, swapChainImages[i], swapchainFormat,
-            VK_IMAGE_ASPECT_COLOR_BIT,1);
+            VK_IMAGE_ASPECT_COLOR_BIT,1,1);
     }
 }
 

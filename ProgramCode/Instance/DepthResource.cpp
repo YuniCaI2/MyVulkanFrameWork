@@ -20,7 +20,7 @@ void VK::Instances::DepthResource::createDepthResources(const VK::Device &device
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        depthImage.imageView = Utils::createImageView(device.vkDevice, depthImage.image, depthFormat,VK_IMAGE_ASPECT_DEPTH_BIT,1);
+        depthImage.imageView = Utils::createImageView(device.vkDevice, depthImage.image, depthFormat,VK_IMAGE_ASPECT_DEPTH_BIT,1,1);
         depthImages.push_back(depthImage);
     }
 }

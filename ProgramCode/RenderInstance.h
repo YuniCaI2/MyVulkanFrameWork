@@ -35,7 +35,8 @@ const bool constexpr enableValidationLayers = true;
 #include "Camera.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#define MODEL_PATH "D:/Model/blue-archive-sunohara-kokona/cocona.obj"
+// #define MODEL_PATH "D:/Model/blue-archive-sunohara-kokona/cocona.obj"
+#define MODEL_PATH "D:/Model/DamagedHelmet.gltf"
 #elif defined(__APPLE__) && defined(__MACH__)
 #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
 #endif
@@ -81,6 +82,7 @@ public:
     VK::Instances::DepthResource depthResource{};
     VK::Instances::CommandBufferManager commandBufferManager{};
     VK::Instances::Model model{};
+    VK::Instances::Light light{};
     std::vector<VK::Instances::UniformBuffer> uniformBuffers{};
     VK::Instances::SyncManager syncManager{};
     uint32_t imageIndex{};
@@ -156,20 +158,9 @@ public:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
-        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera);
+        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, light);
         model.draw(commandBuffer, pipeline.pipelineLayout);
-        // for (auto i = 0; i < model.meshes.size(); i++) {
-        //     VkBuffer vertexBuffers[] = {model.meshes[i].vertexBuffer.buffer.buffer};
-        //     VkDeviceSize offsets[] = {0};
-        //     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        //     vkCmdBindIndexBuffer(commandBuffer, model.meshes[i].indexBuffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-        //     //加载模型中的顶点
-        //     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        //                             pipeline.pipelineLayout, 1, 1,
-        //                             &descriptorManager.textureDescriptorSets[i], 0, nullptr);
-        //     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model.meshes[i].indices.size()), 1, 0, 0, 0);
-        //     //后面的参数用来对齐索引和顶点
-        // }
+
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
@@ -325,7 +316,10 @@ public:
 
         commandBufferManager.createCommandBuffers(device, 2);
 
-        model.LoadModel(device, MODEL_PATH, ModelType::OBJ, commandBufferManager.commandPool);
+        model.LoadModel(device, MODEL_PATH, ModelType::glTF, commandBufferManager.commandPool);
+        light.setColor(glm::vec3(23.47 * 20, 21.31 * 20, 20.79 *20 ));
+        // light.setColor(glm::vec3(0.0f, 1.0f,0.0f));
+        light.setPosition(glm::vec3(6.0f, 1.0f, -5.0f));
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         for (auto &uniformBuffer: uniformBuffers) {
             uniformBuffer.buffer.createBuffer(device, sizeof(UniformBufferObject),
@@ -344,11 +338,11 @@ public:
         for (const auto &mesh: model.meshes) {
             descriptorManager.setImageView(mesh.texture.image.imageView);
         }
-        descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size());
+        descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size() + 10);
         descriptorManager.createSets();
         pipeline.initial(device.vkDevice).
-                setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
-                .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+                setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
+                .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
                 .setRasterizerState()
                 .setMultisampleState()
                 .setColorBlendState().setDepthStencilState().createPipelineLayout(
@@ -386,8 +380,8 @@ public:
                 presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
             pipeline.initial(device.vkDevice).
-                    setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
-                    .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+                    setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
                     .setRasterizerState()
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState().createPipelineLayout(

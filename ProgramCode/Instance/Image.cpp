@@ -20,10 +20,14 @@ void VK::Instances::Image::destroyImage() const {
     vkDestroyImage(device.vkDevice, image, nullptr);
     vkFreeMemory(device.vkDevice, imageMemory, nullptr);
 }
+
 // 辅助函数：计算每个像素的字节数
 uint32_t getFormatSize(VkFormat format) {
-    switch(format) {
-        case VK_FORMAT_R8G8B8A8_UNORM | VK_FORMAT_R8G8B8A8_SRGB | VK_FORMAT_B8G8R8_SRGB: return 4;
+    switch (format) {
+        case VK_FORMAT_R8G8B8A8_UNORM:
+        case VK_FORMAT_R8G8B8A8_SRGB:
+        case VK_FORMAT_B8G8R8A8_SRGB:
+            return 4;
         case VK_FORMAT_R16G16B16A16_SFLOAT: return 8;
         case VK_FORMAT_BC7_UNORM_BLOCK: return 16; // 压缩格式特殊处理
         default: throw std::runtime_error("Unsupported format");
@@ -100,7 +104,7 @@ void VK::Instances::Image::createImage(const VK::Device &device, uint32_t width,
                                        VkMemoryPropertyFlags properties) {
     this->device = device;
     this->arrayNum = arrayNum;
-    this->format =format;
+    this->format = format;
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;

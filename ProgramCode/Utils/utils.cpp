@@ -7,17 +7,20 @@
 #include <fstream>
 
 VkImageView Utils::createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
-                                   uint32_t mipLevels) {
+                                   uint32_t mipLevels, uint32_t arrayNum) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    if(arrayNum > 1) {
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    }
     viewInfo.format = format;
     viewInfo.subresourceRange.aspectMask = aspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = mipLevels;
     viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
+    viewInfo.subresourceRange.layerCount = arrayNum;
     viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
     viewInfo.components.g = VK_COMPONENT_SWIZZLE_G;
     viewInfo.components.b = VK_COMPONENT_SWIZZLE_B;
@@ -123,7 +126,7 @@ bool hasStencilComponent(VkFormat format) {
 
 void Utils::transitionImageLayout(const VK::Device &device, const VkCommandPool &commandPool,
                                   VkImage image, VkFormat format, VkImageLayout oldLayout,
-                                  VkImageLayout newLayout, uint32_t mipLevels) {
+                                  VkImageLayout newLayout, uint32_t mipLevels, uint32_t layerCount) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
     VkImageMemoryBarrier barrier{};
     //此处使用其进行对布局的转换
@@ -147,7 +150,7 @@ void Utils::transitionImageLayout(const VK::Device &device, const VkCommandPool 
     barrier.subresourceRange.baseMipLevel = 0;
     //图像不是数组，也没有mipmap的级别，因此只指定了一个级别和图层
     barrier.subresourceRange.levelCount = mipLevels;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layerCount;
     //不需要等待任何之前的操作完成即可执行后续操作。//前一个阶段如何被访问,accessMask 指定了某个操作对资源的具体访问类型（如读取、写入等）
     //表示在目标阶段（destination stage）不需要任何特定类型的访问。
     VkPipelineStageFlags sourceStage, destinationStage;

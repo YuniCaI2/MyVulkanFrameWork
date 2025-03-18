@@ -121,7 +121,7 @@ void VK::Instances::DescriptorManager::createSetLayouts() {
     uboLayoutBinding.descriptorCount = 1;
 
     uboLayoutBinding.pImmutableSamplers = nullptr; // 与图像采样相关的描述符
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT |  VK_SHADER_STAGE_FRAGMENT_BIT;
     //指的是这里应用顶点着色器的描述符号;
 
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

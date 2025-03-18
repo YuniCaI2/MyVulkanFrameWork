@@ -133,6 +133,9 @@ void GUI::imguiDraw::DrawUI() {
         ImGui::Text("MSAA");
         vulkanInstance->renderType = RenderType::MSAA;
     }
+    float rgb[3] = {vulkanInstance->light.color.r, vulkanInstance->light.color.g, vulkanInstance->light.color.b};
+    ImGui::SliderFloat3("LightColor",rgb , 0.0f, 1000.0f);
+    vulkanInstance->light.setColor(glm::vec3(rgb[0],rgb[1],rgb[2]));
 
     // 添加 UI 控件...
     ImGui::End();

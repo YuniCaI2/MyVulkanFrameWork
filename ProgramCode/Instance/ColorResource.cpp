@@ -19,7 +19,7 @@ void VK::Instances::ColorResource::createColorResources(const VK::Device &device
                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         colorImage.imageView = Utils::createImageView(device.vkDevice, colorImage.image, colorFormat,
-                                                      VK_IMAGE_ASPECT_COLOR_BIT, 1);
+                                                      VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
         colorImages.push_back(colorImage);
     }
 }
