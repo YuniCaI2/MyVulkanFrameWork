@@ -27,8 +27,11 @@ uint32_t getFormatSize(VkFormat format) {
         case VK_FORMAT_R8G8B8A8_UNORM:
         case VK_FORMAT_R8G8B8A8_SRGB:
         case VK_FORMAT_B8G8R8A8_SRGB:
+        case VK_FORMAT_D32_SFLOAT:
             return 4;
+        case VK_FORMAT_R16G16B16A16_UNORM:
         case VK_FORMAT_R16G16B16A16_SFLOAT: return 8;
+        case VK_FORMAT_R32G32B32A32_SFLOAT:
         case VK_FORMAT_BC7_UNORM_BLOCK: return 16; // 压缩格式特殊处理
         default: throw std::runtime_error("Unsupported format");
     }
@@ -120,10 +123,7 @@ void VK::Instances::Image::createImage(const VK::Device &device, uint32_t width,
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (format == VK_FORMAT_B8G8R8A8_SRGB ||
-        format == VK_FORMAT_R8G8B8A8_SRGB) {
-        size = width * height * 4;
-    }
+    size = width * height * getFormatSize(format);
     this->width = width;
     this->height = height;
 

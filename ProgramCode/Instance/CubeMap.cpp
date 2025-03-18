@@ -10,10 +10,15 @@ void VK::Instances::CubeMap::createCubeMap(const VK::Device& device, const std::
     if (image.empty()) {
         throw std::runtime_error("无法加载纹理图像: " + cubeMapPath);  // 加载失败抛出异常
     }
+    if (image.depth() == CV_16U || image.depth() == CV_16S) {
+
+    } else if (image.depth() == CV_32F) {
+
+    }
     cv::Mat resizedImage;
     cv::cvtColor(image, resizedImage, cv::COLOR_BGRA2RGBA);  // 转换图像格式为 RGBA
-    VkDeviceSize imageSize = resizedImage.rows * resizedImage.cols * 4;  // 计算图像数据大小
-    auto* imageData = reinterpret_cast<uint8_t*>(resizedImage.data);  // 获取图像数据指针
+    VkDeviceSize imageSize = resizedImage.rows * resizedImage.cols * 8;  // 计算图像数据大小//HDRI为16位图像
+    auto* imageData = reinterpret_cast<uint16_t*>(resizedImage.data);  // 获取图像数据指针
     this->image.width = resizedImage.cols;  // 设置纹理宽度
     this->image.height = resizedImage.rows;  // 设置纹理高度
 
