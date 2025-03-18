@@ -21,7 +21,7 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
     alignas(4) int32_t lightCount;
-    LightUniform light;
+    LightUniform light[2];
 };
 
 #endif //UNIFORMBUFFEROBJECT_H

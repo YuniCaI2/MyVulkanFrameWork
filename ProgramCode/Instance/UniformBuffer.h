@@ -13,7 +13,7 @@ namespace VK::Instances {
     class UniformBuffer {
     public:
         Buffer buffer;
-        static void update(const UniformBuffer& uniformBuffer,const VkExtent2D& extent, const Camera& camera, const Light& light);
+        static void update(const UniformBuffer& uniformBuffer,const VkExtent2D& extent, const Camera& camera, const std::vector<Light>& light);
     };
 }
 

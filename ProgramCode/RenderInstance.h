@@ -82,8 +82,11 @@ public:
     std::vector<VK::Render::FrameBuffer> presentFrameBuffers{};
     VK::Instances::DepthResource depthResource{};
     VK::Instances::CommandBufferManager commandBufferManager{};
+    //场景数据
+    VK::Instances::Image cubeMap{};
     VK::Instances::Model model{};
     VK::Instances::Light light{};
+    std::vector<VK::Instances::Light> lights{};//多个光源
     std::vector<VK::Instances::UniformBuffer> uniformBuffers{};
     VK::Instances::SyncManager syncManager{};
     uint32_t imageIndex{};
@@ -159,7 +162,7 @@ public:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
-        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, light);
+        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, lights);
         model.draw(commandBuffer, pipeline.pipelineLayout);
 
         vkCmdEndRenderPass(commandBuffer);
@@ -317,10 +320,19 @@ public:
 
         commandBufferManager.createCommandBuffers(device, 2);
 
+
+        //初始化场景
+
         model.LoadModel(device, MODEL_PATH, ModelType::glTF, commandBufferManager.commandPool);
-        light.setColor(glm::vec3(23.47 * 20, 21.31 * 20, 20.79 *20 ));
+        light.setColor(glm::vec3(23.47 * 10 , 21.31 * 10 , 20.79 * 10  ));
         // light.setColor(glm::vec3(0.0f, 1.0f,0.0f));
         light.setPosition(glm::vec3(6.0f, 1.0f, -5.0f));
+        lights.resize(2);
+        lights[0] = light;
+        lights[1].setColor(glm::vec3(23.47 , 21.31 , 20.79  ));
+        lights[1].setPosition(glm::vec3(-6.0f, 1.0f, -5.0f));//副光源
+
+        //设置uniform
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         for (auto &uniformBuffer: uniformBuffers) {
             uniformBuffer.buffer.createBuffer(device, sizeof(UniformBufferObject),
@@ -336,11 +348,10 @@ public:
         for (const auto &uniformBuffer: uniformBuffers) {
             descriptorManager.setUniformBuffer(uniformBuffer.buffer.buffer);
         }
-        for (const auto &mesh: model.meshes) {
-            descriptorManager.setImageView(mesh.texture.image.imageView);
-        }
         descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size() + 10);
         descriptorManager.createSets();
+
+
         pipeline.initial(device.vkDevice).
                 setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
                 .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
