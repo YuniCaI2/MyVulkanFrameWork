@@ -38,7 +38,8 @@ const bool constexpr enableValidationLayers = true;
 // #define MODEL_PATH "D:/Model/blue-archive-sunohara-kokona/cocona.obj"
 #define MODEL_PATH "D:/Model/DamagedHelmet.gltf"
 #elif defined(__APPLE__) && defined(__MACH__)
-#define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
+// #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
+#define MODEL_PATH "/Users/yunicai/Model/DamagedHelmet.gltf"
 #endif
 
 enum class RenderType {

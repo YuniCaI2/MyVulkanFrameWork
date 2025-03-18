@@ -120,6 +120,7 @@ void GUI::imguiDraw::DrawUI() {
     ImGui::SetNextWindowSize(ImVec2(300, static_cast<float>(vulkanInstance->swapChain.extent.height))); // 宽度 200，高度填满
     ImGui::Begin("Settings");
     ImGui::Text("FPS: %.1f", vulkanInstance->currentFPS);
+    ImGui::Text("SwapChainFormat: %d", vulkanInstance->swapChain.format);
 
     ImGui::Text("MSAA:");
     static int radioValue = 0;

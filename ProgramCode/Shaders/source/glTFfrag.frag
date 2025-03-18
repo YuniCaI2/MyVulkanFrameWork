@@ -94,20 +94,41 @@ vec3 getNormal(vec3 texNormal)
     // 将切线空间法线转换为世界空间
     return normalize(TBN * tangentNormal);
 }
+//一般的颜色纹理，我们都加载成SRGB格式，因为颜色纹理已经提前被gamma校正了，FORMAT设置成SRGB后，
+//API会自动的映射回线形空间，但是我把材质性质的贴图设置为SRGB则也会做这个校正，所以这里要反向校正回去
+float linearToSrgb(float value) {
+    if (value <= 0.0031308) {
+        return value * 12.92;
+    } else {
+        return 1.055 * pow(value, 1.0 / 2.4) - 0.055;
+    }
+}
 
 void main() {
     // 计算 TBN 矩阵（世界空间）
 
     vec3 fragViewPos = ubo.viewPos;
     vec3 albedo = texture(textureArray, vec3(fragTexCoord, 0.0f)).rgb;
-    vec3 tangentNormal = normalize(texture(textureArray, vec3(fragTexCoord, 1.0f)).rgb * 2.0 - 1.0);
-    float roughness = max(texture(textureArray, vec3(fragTexCoord, 2.0f)).g,0.1);
-    float metallic =texture(textureArray, vec3(fragTexCoord, 2.0f)).b + 0.01;
-    vec3 emissive = texture(textureArray, vec3(fragTexCoord, 3.0f)).rgb;
-    float ao = texture(textureArray, vec3(fragTexCoord, 4.0f)).r;
-//    roughness = 0.2;
-//    metallic = 1;
 
+    // 法线贴图（加载为 sRGB，需抵消 Vulkan 的自动转换）
+    vec4 normalSample = texture(textureArray, vec3(fragTexCoord, 1.0f));
+    vec3 normalRaw = vec3(
+    linearToSrgb(normalSample.r),
+    linearToSrgb(normalSample.g),
+    linearToSrgb(normalSample.b)
+    );
+    vec3 tangentNormal = normalize(normalRaw * 2.0 - 1.0);
+
+    // 金属度粗糙度贴图（假设也加载为 sRGB，需抵消转换）
+    vec4 metallicRoughness = texture(textureArray, vec3(fragTexCoord, 2.0f));
+    float roughness = max(linearToSrgb(metallicRoughness.g), 0.1); // 粗糙度
+    float metallic = linearToSrgb(metallicRoughness.b);           // 金属度
+
+    // 自发光贴图（sRGB 格式，Vulkan 自动转为线性空间）
+    vec3 emissive = texture(textureArray, vec3(fragTexCoord, 3.0f)).rgb;
+
+    // AO 贴图（假设也加载为 sRGB，需抵消转换）
+    float ao = linearToSrgb(texture(textureArray, vec3(fragTexCoord, 4.0f)).r);//    roughness = 0.2;
 
 //    vec3 N = normalize(fragTBN * tangentNormal);
     vec3 N = getNormal(tangentNormal);
