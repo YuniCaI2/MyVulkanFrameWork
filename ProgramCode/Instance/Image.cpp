@@ -122,6 +122,9 @@ void VK::Instances::Image::createImage(const VK::Device &device, uint32_t width,
     imageInfo.tiling = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    if (format != VK_FORMAT_R8G8B8A8_SRGB && format != VK_FORMAT_B8G8R8A8_SRGB && format != VK_FORMAT_R8G8B8A8_UNORM && format > 1) {
+        imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;//兼容HDRI CUBEMAP。这样操作，暂不支持LDR天空盒
+    }
 
     size = width * height * getFormatSize(format);
     this->width = width;

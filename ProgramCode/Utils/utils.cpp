@@ -12,7 +12,11 @@ VkImageView Utils::createImageView(VkDevice device, VkImage image, VkFormat form
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    if(arrayNum > 1) {
+    if (arrayNum > 1) {
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY; //兼容CUBEMAP
+    }
+    if (arrayNum > 1 && (format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_B8G8R8A8_SRGB || format ==
+                         VK_FORMAT_R8G8B8A8_UNORM)) {
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
     }
     viewInfo.format = format;
@@ -179,7 +183,24 @@ void Utils::transitionImageLayout(const VK::Device &device, const VkCommandPool 
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         //早期片段测试
-    } else {
+    } else if (
+        oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+        newLayout == VK_IMAGE_LAYOUT_GENERAL
+    ) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;//为了CUBEMAP
+    }else if (
+        oldLayout == VK_IMAGE_LAYOUT_GENERAL &&
+        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    ) {
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;//为了CUBEMAP
+    }
+    else {
         throw std::runtime_error("Unsupported layout transition");
     }
 
@@ -202,11 +223,12 @@ void Utils::checkVkResult(VkResult result) {
 }
 
 //获取合适的MSAA采样数量
-VkSampleCountFlagBits Utils::getMaxUsableSampleCount(const VkPhysicalDevice& physicalDevice) {
+VkSampleCountFlagBits Utils::getMaxUsableSampleCount(const VkPhysicalDevice &physicalDevice) {
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
-    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.
+                                limits.framebufferDepthSampleCounts;
     if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
     if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
     if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
@@ -216,4 +238,3 @@ VkSampleCountFlagBits Utils::getMaxUsableSampleCount(const VkPhysicalDevice& phy
 
     return VK_SAMPLE_COUNT_1_BIT;
 }
-

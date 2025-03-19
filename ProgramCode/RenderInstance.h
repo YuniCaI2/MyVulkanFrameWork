@@ -421,8 +421,8 @@ public:
                 presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
             pipeline.initial(device.vkDevice).
-                    setShader("../ProgramCode/Shaders/spv/vert.spv", ShaderStage::VERT)
-                    .setShader("../ProgramCode/Shaders/spv/frag.spv", ShaderStage::FRAG)
+            setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
+            .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
                     .setRasterizerState()
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState()

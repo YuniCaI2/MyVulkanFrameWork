@@ -1,0 +1,39 @@
+﻿#version 450
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(binding = 0) uniform sampler2D equirectangularMap;
+layout(binding = 1, rgba32f) uniform imageCube cubemap;
+
+const float PI = 3.14159265359;
+
+vec3 uvToDirection(vec2 uv, uint face) {
+    vec2 coord = uv * 2.0 - 1.0; // [0,1] -> [-1,1]
+    vec3 dir;
+    if (face == 0) dir = vec3(1.0, -coord.y, -coord.x);  // +X
+    else if (face == 1) dir = vec3(-1.0, -coord.y, coord.x); // -X
+    else if (face == 2) dir = vec3(coord.x, 1.0, coord.y);   // +Y
+    else if (face == 3) dir = vec3(coord.x, -1.0, -coord.y); // -Y
+    else if (face == 4) dir = vec3(coord.x, -coord.y, 1.0);  // +Z
+    else dir = vec3(-coord.x, -coord.y, -1.0);               // -Z
+    return normalize(dir);
+}
+
+vec2 directionToEquiUV(vec3 dir) {
+    float theta = atan(dir.z, dir.x); // 水平角度
+    float phi = asin(dir.y);          // 垂直角度
+    return vec2((theta / (2.0 * PI)) + 0.5, (phi / PI) + 0.5);
+}
+
+void main() {
+    ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+    if (texel.x >= 1024 || texel.y >= 1024) return; // 边界检查
+
+    vec2 uv = vec2(texel) / 1024.0; // 假设分辨率 1024x1024
+    uint face = gl_GlobalInvocationID.z;
+
+    vec3 dir = uvToDirection(uv, face);
+    vec2 equiUV = directionToEquiUV(dir);
+    vec4 color = texture(equirectangularMap, equiUV);
+
+    imageStore(cubemap, ivec3(texel, face), color);
+}
