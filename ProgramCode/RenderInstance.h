@@ -37,6 +37,7 @@ const bool constexpr enableValidationLayers = true;
 
 #if defined(_WIN32) || defined(_WIN64)
 // #define MODEL_PATH "D:/Model/blue-archive-sunohara-kokona/cocona.obj"
+#define CUBEMAP_PATH "D:/Model/cubemap1.exr"
 #define MODEL_PATH "D:/Model/DamagedHelmet.gltf"
 #elif defined(__APPLE__) && defined(__MACH__)
 // #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
@@ -166,6 +167,9 @@ public:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipeline.pipelineLayout, 2, 1,
+            &descriptorManager.textureDescriptorSets[0], 0, nullptr);
         VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, lights);
         model.draw(commandBuffer, pipeline.pipelineLayout);
 
@@ -353,6 +357,7 @@ public:
         for (const auto &uniformBuffer: uniformBuffers) {
             descriptorManager.setUniformBuffer(uniformBuffer.buffer.buffer);
         }
+        descriptorManager.setImageView(cubeMap.image.imageView);
         descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size() + 10);
         descriptorManager.createSets();
 
@@ -363,7 +368,7 @@ public:
                 .setRasterizerState()
                 .setMultisampleState()
                 .setColorBlendState().setDepthStencilState().createPipelineLayout(
-                    {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                    {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,  descriptorManager.textureDescriptorSetLayout}, //使用了几个Sets
                     VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
                 )
                 .createPipeline(swapChain

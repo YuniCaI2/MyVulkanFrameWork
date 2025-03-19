@@ -32,6 +32,7 @@ layout(push_constant) uniform PushConstants {
 } model;
 
 void main() {
+    localPos = inPosition;
     fragPos = vec3(model.modelMatrix * vec4(inPosition, 1.0)); // 世界空间位置
     gl_Position = ubo.proj * ubo.view * model.modelMatrix * vec4(inPosition, 1.0);
     fragColor = inColor;
