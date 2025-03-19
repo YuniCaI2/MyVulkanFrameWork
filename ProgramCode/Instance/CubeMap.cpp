@@ -10,8 +10,8 @@ void VK::Instances::CubeMap::createCubeMap(const VK::Device &device, const VkCom
                                            const std::string &cubeMapPath) {
     m_Device = device.vkDevice;
     LoadEXRRawImage(device, commandPool, cubeMapPath);
-    createDescriptor(device, sampler);
     LoadShader("../ProgramCode/Shaders/spv/computerForCubeMap.spv");
+    createDescriptor(device, sampler);
     LoadPipeline(device, commandPool);
 
     VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(device, commandPool);
@@ -26,14 +26,14 @@ void VK::Instances::CubeMap::createCubeMap(const VK::Device &device, const VkCom
     Utils::transitionImageLayout(device, commandPool, this->image.image, this->image.format,
                              VK_IMAGE_LAYOUT_GENERAL,
                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 6);
-    vkDestroyPipeline(device.vkDevice, computePipeline, nullptr);
-    vkDestroyPipelineLayout(device.vkDevice, computePipelineLayout, nullptr);
-    rawImage.destroyImage();
-    vkDestroyDescriptorSetLayout(m_Device, descriptorSetLayout, nullptr);
-    vkDestroyDescriptorPool(m_Device, descriptorPool, nullptr);
 }
 
 void VK::Instances::CubeMap::Destroy() const {
+    vkDestroyPipeline(m_Device, computePipeline, nullptr);
+    vkDestroyPipelineLayout(m_Device, computePipelineLayout, nullptr);
+    rawImage.destroyImage();
+    vkDestroyDescriptorSetLayout(m_Device, descriptorSetLayout, nullptr);
+    vkDestroyDescriptorPool(m_Device, descriptorPool, nullptr);
     image.destroyImage();
 }
 
@@ -41,35 +41,33 @@ void VK::Instances::CubeMap::Destroy() const {
 void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkCommandPool &commandPool,
                                              const std::string &Path) {
     Buffer rawImageData{};
-    cv::Mat image = cv::imread(Path);
+    cv::Mat image = cv::imread(Path, cv::IMREAD_UNCHANGED);
+    std::cout << "Image depth:" << image.depth() << std::endl;
+    std::cout << cv::getBuildInformation() << std::endl;
     if (image.empty()) {
         throw std::runtime_error("无法加载纹理图像: " + Path); // 加载失败抛出异常
     }
     cv::cvtColor(image, image, cv::COLOR_BGRA2RGBA); // 转换图像格式为 RGBA
-    if (image.depth() == CV_16U || image.depth() == CV_16S) {
+    if (image.depth() == CV_16U || image.depth() == CV_16F) {
         auto imageData = reinterpret_cast<uint16_t *>(image.data);
         VkDeviceSize imageSize = image.rows * image.cols * 8;
         rawImageData.createBuffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         rawImageData.Map();
         memcpy(rawImageData.data, imageData, static_cast<size_t>(imageSize));
-        rawImageData.UnMap();
 
         rawImage.createImage(device, image.cols, image.rows, 1, 1,
                              VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
+        Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R16G16B16A16_SFLOAT,
+                             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1);
         rawImage.copy(rawImageData.buffer, commandPool);
         rawImage.imageView = Utils::createImageView(device.vkDevice, rawImage.image, VK_FORMAT_R16G16B16A16_SFLOAT,
                                                     VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
-        rawImageData.destroyBuffer();
         Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R16G16B16A16_SFLOAT,
-                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1);
-        rawImage.copy(rawImageData.buffer, commandPool);
-        rawImageData.destroyBuffer();
-        Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R16G16B16A16_SFLOAT,
-                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, 1, 6);
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 1);
         this->image.createImage(device, 1024, 1024, 1, 6,
                                 VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
                                 VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -80,30 +78,26 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
                                      VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_GENERAL, 1, 6);
     }
-    if (image.depth() == CV_32S) {
+    if (image.depth() == CV_32F) {
         auto imageData = reinterpret_cast<uint32_t *>(image.data);
         VkDeviceSize imageSize = image.rows * image.cols * 16;
         rawImageData.createBuffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         rawImageData.Map();
         memcpy(rawImageData.data, imageData, static_cast<size_t>(imageSize));
-        rawImageData.UnMap();
 
         rawImage.createImage(device, image.cols, image.rows, 1, 1,
                              VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
+        Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
+                             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1);
         rawImage.copy(rawImageData.buffer, commandPool);
         rawImage.imageView = Utils::createImageView(device.vkDevice, rawImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
                                                     VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
-        rawImageData.destroyBuffer();
         Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
-                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1);
-        rawImage.copy(rawImageData.buffer, commandPool);
-        rawImageData.destroyBuffer();
-        Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
-                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, 1, 6);
+                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 1);
         this->image.createImage(device, 1024, 1024, 1, 6,
                                 VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
                                 VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -114,6 +108,7 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
                                      VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_GENERAL, 1, 6);
     }
+    rawImageData.destroyBuffer();
 }
 
 void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const VkSampler &sampler) {
@@ -130,21 +125,25 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
+    layoutInfo.bindingCount = 2;
     layoutInfo.pBindings = bindings;
 
     if (vkCreateDescriptorSetLayout(device.vkDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout for CubeMap!");
     }
-
+    std::vector< VkDescriptorPoolSize> poolSizes;
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     VkDescriptorPoolSize descriptorPoolSize{};
     descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorPoolSize.descriptorCount = 2;
+    descriptorPoolSize.descriptorCount = 1;
+    poolSizes.push_back(descriptorPoolSize);
+    descriptorPoolSize.descriptorCount = 1;
+    descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes.push_back(descriptorPoolSize);
 
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &descriptorPoolSize;
+    poolInfo.poolSizeCount = poolSizes.size();
+    poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = 1;
     if (vkCreateDescriptorPool(device.vkDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool for CubeMap!");
@@ -165,7 +164,7 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
 
     VkDescriptorImageInfo descriptorImageInfo{};
     descriptorImageInfo.sampler = sampler;
-    descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     descriptorImageInfo.imageView = image.imageView;
 
     VkWriteDescriptorSet writes[2] = {};

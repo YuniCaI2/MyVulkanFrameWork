@@ -10,6 +10,7 @@
 namespace VK::Render {
     class Shader {
     public:
+        Shader() = default;
         Shader(VkDevice device, const std::string& filepath, VkShaderStageFlagBits stage);
         VkPipelineShaderStageCreateInfo getPipelineShaderStageCreateInfo();
         void DestroyShaderModule() const;

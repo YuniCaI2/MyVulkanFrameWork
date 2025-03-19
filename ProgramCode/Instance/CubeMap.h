@@ -10,17 +10,16 @@
 namespace VK::Instances {
     class CubeMap {
     public:
-        CubeMap() = default;
         void createCubeMap(const VK::Device& device, const VkCommandPool& commandPool, const VkSampler& sampler,const std::string& cubeMapPath);
         void Destroy() const;
         Image image{};
 
     private:
         Image rawImage{};
-        VkDevice m_Device;
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet descriptorSet;
+        VkDevice m_Device{};
+        VkDescriptorPool descriptorPool{};
+        VkDescriptorSetLayout descriptorSetLayout{};
+        VkDescriptorSet descriptorSet{};
         VK::Render::Shader computeShader;
         VkPipeline computePipeline{};
         VkPipelineLayout computePipelineLayout{};

@@ -5,6 +5,7 @@
 #ifndef MYVULKAN_H
 #define MYVULKAN_H
 #include "Instance/ColorResource.h"
+#include "Instance/CubeMap.h"
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -40,6 +41,7 @@ const bool constexpr enableValidationLayers = true;
 #elif defined(__APPLE__) && defined(__MACH__)
 // #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
 #define MODEL_PATH "/Users/yunicai/Model/DamagedHelmet.gltf"
+#define CUBEMAP_PATH "/Users/yunicai/Model/cubemap1.exr"
 #endif
 
 enum class RenderType {
@@ -83,7 +85,6 @@ public:
     VK::Instances::DepthResource depthResource{};
     VK::Instances::CommandBufferManager commandBufferManager{};
     //场景数据
-    VK::Instances::Image cubeMap{};
     VK::Instances::Model model{};
     VK::Instances::Light light{};
     std::vector<VK::Instances::Light> lights{};//多个光源
@@ -112,6 +113,9 @@ public:
     VkSampleCountFlagBits maxMsaaSamples{VK_SAMPLE_COUNT_1_BIT};
     std::vector<VK::Render::FrameBuffer> massFrameBuffers{};
     VK::Instances::ColorResource colorResource{};
+
+    //cubemap
+    VK::Instances::CubeMap cubeMap{};
 
 public:
     void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
@@ -281,6 +285,7 @@ public:
 
 
     void cleanup() {
+        cubeMap.Destroy();
         model.destroy();
         syncManager.destroySyncObjects();
         for (auto i = 0; i < uniformBuffers.size(); i++) {
@@ -322,7 +327,6 @@ public:
 
 
         //初始化场景
-
         model.LoadModel(device, MODEL_PATH, ModelType::glTF, commandBufferManager.commandPool);
         light.setColor(glm::vec3(23.47 * 10 , 21.31 * 10 , 20.79 * 10  ));
         // light.setColor(glm::vec3(0.0f, 1.0f,0.0f));
@@ -331,6 +335,7 @@ public:
         lights[0] = light;
         lights[1].setColor(glm::vec3(23.47 , 21.31 , 20.79  ));
         lights[1].setPosition(glm::vec3(-6.0f, 1.0f, -5.0f));//副光源
+        cubeMap.createCubeMap(device, commandBufferManager.commandPool, model.sampler.sampler, CUBEMAP_PATH);
 
         //设置uniform
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);

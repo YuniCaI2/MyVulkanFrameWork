@@ -19,8 +19,8 @@ vec3 uvToDirection(vec2 uv, uint face) {
 }
 
 vec2 directionToEquiUV(vec3 dir) {
-    float theta = atan(dir.z, dir.x); // 水平角度
-    float phi = asin(dir.y);          // 垂直角度
+    float theta = atan(dir.z, dir.x);
+    float phi = asin(dir.y);
     return vec2((theta / (2.0 * PI)) + 0.5, (phi / PI) + 0.5);
 }
 

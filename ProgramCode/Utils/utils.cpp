@@ -13,7 +13,7 @@ VkImageView Utils::createImageView(VkDevice device, VkImage image, VkFormat form
     viewInfo.image = image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     if (arrayNum > 1) {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY; //兼容CUBEMAP
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE; //兼容CUBEMAP
     }
     if (arrayNum > 1 && (format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_B8G8R8A8_SRGB || format ==
                          VK_FORMAT_R8G8B8A8_UNORM)) {
@@ -195,7 +195,7 @@ void Utils::transitionImageLayout(const VK::Device &device, const VkCommandPool 
         oldLayout == VK_IMAGE_LAYOUT_GENERAL &&
         newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     ) {
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;//为了CUBEMAP
