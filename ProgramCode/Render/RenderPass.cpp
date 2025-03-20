@@ -22,7 +22,9 @@ void VK::Render::RenderPass::setAttachmentReference(const VkAttachmentReference 
 
 
 void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDevice, const VkDevice &device,
-                                              const VkFormat &format, const VkSampleCountFlagBits& sampleCount, RenderPassType renderPassType) {
+                                              const VkFormat &format, const VkSampleCountFlagBits &sampleCount,
+                                              RenderPassType renderPassType) {
+    this->renderPassType = renderPassType;
     this->device = device;
     this->swapchainImageFormat = format;
     this->physicalDevice = physicalDevice;
@@ -194,6 +196,7 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
             .attachment = 2,
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
         });
+
         setSubpassDescription({
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .colorAttachmentCount = 1,
@@ -227,6 +230,116 @@ void VK::Render::RenderPass::createRenderPass(const VkPhysicalDevice &physicalDe
             throw std::runtime_error("Failed to create render pass!");
         }
     }
+    if (renderPassType == RenderPassType::IBLMSAA) {
+        // 清空所有向量，确保从干净状态开始
+        attachments.clear();
+        attachmentReferences.clear();
+        subpass.clear();
+        subpassDependencies.clear();
+
+        // 设置附件描述
+        setAttachmentDescription({
+            .flags = 0,
+            .format = swapchainImageFormat,
+            .samples = sampleCount,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        });
+
+        setAttachmentDescription({
+            .format = Utils::findDepthFormat(physicalDevice),
+            .samples = sampleCount,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        });
+
+        setAttachmentDescription({
+            .flags = 0,
+            .format = swapchainImageFormat,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        });
+
+        // 先添加所有附件引用
+        setAttachmentReference({
+            .attachment = 0,
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        });
+        setAttachmentReference({
+            .attachment = 1,
+            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        });
+        setAttachmentReference({
+            .attachment = 2,
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // 解析附件应匹配 finalLayout
+        });
+
+        // 配置 Subpass（在所有引用添加完成后获取指针）
+        setSubpassDescription({
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &attachmentReferences[0],
+            .pDepthStencilAttachment = &attachmentReferences[1]
+        });
+
+        setSubpassDescription({
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &attachmentReferences[0],
+            .pResolveAttachments = &attachmentReferences[2],
+            .pDepthStencilAttachment = &attachmentReferences[1]
+        });
+
+        // 设置依赖关系
+        setSubpassDependency({
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = 0
+        });
+        setSubpassDependency({
+            .srcSubpass = 0,
+            .dstSubpass = 1,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = 0
+        });
+
+        // 创建 Render Pass
+        VkRenderPassCreateInfo renderPassInfo = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .attachmentCount = static_cast<uint32_t>(attachments.size()),
+            .pAttachments = attachments.data(),
+            .subpassCount = static_cast<uint32_t>(subpass.size()),
+            .pSubpasses = subpass.data(),
+            .dependencyCount = static_cast<uint32_t>(subpassDependencies.size()),
+            .pDependencies = subpassDependencies.data()
+        };
+
+        if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create render pass!");
+        }
+    }
 }
 
 void VK::Render::RenderPass::setSubpassDependency(const VkSubpassDependency &subpassDependency) {
@@ -237,7 +350,7 @@ void VK::Render::RenderPass::setMsaaCount(VkSampleCountFlagBits msaaCount) {
     this->sampleCount = msaaCount;
 }
 
-void VK::Render::RenderPass::DestroyRenderPass()  {
+void VK::Render::RenderPass::DestroyRenderPass() {
     this->attachments.clear();
     this->subpassDependencies.clear();
     this->attachmentReferences.clear();

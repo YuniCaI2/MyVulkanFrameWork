@@ -47,7 +47,8 @@ const bool constexpr enableValidationLayers = true;
 
 enum class RenderType {
     NORMAL,
-    MSAA
+    MSAA,
+    IBLMSAA
 };
 
 
@@ -88,7 +89,7 @@ public:
     //场景数据
     VK::Instances::Model model{};
     VK::Instances::Light light{};
-    std::vector<VK::Instances::Light> lights{};//多个光源
+    std::vector<VK::Instances::Light> lights{}; //多个光源
     std::vector<VK::Instances::UniformBuffer> uniformBuffers{};
     VK::Instances::SyncManager syncManager{};
     uint32_t imageIndex{};
@@ -97,6 +98,8 @@ public:
 
     //RenderInstance 所对应的RenderType
     RenderType renderType{RenderType::NORMAL};
+    //CubeMap
+    bool hasCubeMap{false};
 
 
     //视角移动变量
@@ -117,6 +120,7 @@ public:
 
     //cubemap
     VK::Instances::CubeMap cubeMap{};
+    VK::Render::Pipeline CubeMapPipeline{};
 
 public:
     void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
@@ -164,14 +168,26 @@ public:
         scissor.extent = swapChain.extent;
         scissor.offset = {0, 0};
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline.pipelineLayout, 2, 1,
-            &descriptorManager.textureDescriptorSets[0], 0, nullptr);
+
         VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, lights);
+
         model.draw(commandBuffer, pipeline.pipelineLayout);
+
+        if (renderPass.renderPassType == RenderPassType::IBLMSAA) {
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, CubeMapPipeline.m_pipeline);
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    CubeMapPipeline.pipelineLayout, 0, 1,
+                                    &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    CubeMapPipeline.pipelineLayout, 1, 1,
+                                    &descriptorManager.textureDescriptorSets[0], 0, nullptr);
+            vkCmdDraw(commandBuffer, 36, 1, 0, 0);
+        }
 
         vkCmdEndRenderPass(commandBuffer);
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -289,6 +305,9 @@ public:
 
 
     void cleanup() {
+        if (CubeMapPipeline.m_pipeline != VK_NULL_HANDLE) {
+            CubeMapPipeline.Destroy();
+        }
         cubeMap.Destroy();
         model.destroy();
         syncManager.destroySyncObjects();
@@ -299,7 +318,7 @@ public:
         descriptorManager.destroy();
         cleanupSwapChain();
 
-        if (!(RenderType::MSAA == renderType)) {
+        if (!(RenderType::MSAA == renderType || RenderType::IBLMSAA == renderType)) {
             colorResource.destroyColorResources();
             //保证删除color Resource
         }
@@ -332,13 +351,13 @@ public:
 
         //初始化场景
         model.LoadModel(device, MODEL_PATH, ModelType::glTF, commandBufferManager.commandPool);
-        light.setColor(glm::vec3(23.47 * 10 , 21.31 * 10 , 20.79 * 10  ));
+        light.setColor(glm::vec3(23.47 * 10, 21.31 * 10, 20.79 * 10));
         // light.setColor(glm::vec3(0.0f, 1.0f,0.0f));
         light.setPosition(glm::vec3(6.0f, 1.0f, -5.0f));
         lights.resize(2);
         lights[0] = light;
-        lights[1].setColor(glm::vec3(23.47 , 21.31 , 20.79  ));
-        lights[1].setPosition(glm::vec3(-6.0f, 1.0f, -5.0f));//副光源
+        lights[1].setColor(glm::vec3(23.47, 21.31, 20.79));
+        lights[1].setPosition(glm::vec3(-6.0f, 1.0f, -5.0f)); //副光源
         cubeMap.createCubeMap(device, commandBufferManager.commandPool, model.sampler.sampler, CUBEMAP_PATH);
 
         //设置uniform
@@ -368,22 +387,99 @@ public:
                 .setRasterizerState()
                 .setMultisampleState()
                 .setColorBlendState().setDepthStencilState().createPipelineLayout(
-                    {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,  descriptorManager.textureDescriptorSetLayout}, //使用了几个Sets
-                    VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
+                    {
+                        descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,
+                        descriptorManager.textureDescriptorSetLayout
+                    }, //使用了几个Sets
+                    VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                 )
                 .createPipeline(swapChain
-                                , renderPass.m_renderPass);
+                                , renderPass.m_renderPass, 1);
         //创建颜色附件用于MSAA
         colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
                                            swapChain.swapChainImages.size());
         //MSAA参数：
         maxMsaaSamples = Utils::getMaxUsableSampleCount(device.physicalDevice);
+
+
+        // CubeMapPipeline.initial(device.vkDevice).
+        //         setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
+        //         .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
+        //         .setRasterizerState()
+        //         .setMultisampleState(msaaSamples)
+        //         .setColorBlendState().setDepthStencilState().createPipelineLayout(
+        //             {
+        //                 descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout
+        //             }, //使用了几个Sets
+        //             NULL,NULL
+        //         )
+        //         .createPipeline(swapChain
+        //                         , renderPass.m_renderPass, true);
     }
 
     void recreateRenderResource(RenderType currentRenderType) {
+        if (renderType == RenderType::IBLMSAA) {
+            msaaSamples = maxMsaaSamples;
+            vkDeviceWaitIdle(device.vkDevice);
+            cleanupSwapChain();
+            pipeline.Destroy();
+            renderPass.DestroyRenderPass();
+            swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
+            renderPass.createRenderPass(physicalDevice.Device(), device.vkDevice, swapChain.format, msaaSamples,
+                                        RenderPassType::IBLMSAA);
+            depthResource.createDepthResources(device, swapChain.extent, msaaSamples,
+                                               swapChain.swapChainImages.size());
+            colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
+                                               swapChain.swapChainImages.size());
+            for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
+                std::vector<VkImageView> attachments{};
+                attachments.push_back(colorResource.getImageViews()[i]);
+                attachments.push_back(depthResource.getImageViews()[i]);
+                attachments.push_back(swapChain.swapChainImageViews[i]);
+                presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
+            }
+            pipeline.initial(device.vkDevice).
+                    setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
+                    .setRasterizerState()
+                    .setMultisampleState(msaaSamples)
+                    .setColorBlendState().setDepthStencilState().createPipelineLayout(
+                        {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                        VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
+                    )
+                    .createPipeline(swapChain, renderPass.m_renderPass, 1);
+            CubeMapPipeline.initial(device.vkDevice).
+                    setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
+                    .setRasterizerState(
+                        VK_FALSE,
+                        VK_POLYGON_MODE_FILL,
+                        VK_CULL_MODE_FRONT_BIT,
+                        VK_FRONT_FACE_COUNTER_CLOCKWISE,
+
+                        1.0f,
+                        VK_FALSE,
+                        0.0f,
+                        0.0f,
+                        0.0f,
+                        VK_FALSE
+                    )
+                    .setMultisampleState(msaaSamples)
+                    .setColorBlendState().setDepthStencilState().createPipelineLayout(
+                        {
+                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout
+                        }, //使用了几个Sets
+                        NULL,NULL
+                    )
+                    .createPipeline(swapChain
+                                    , renderPass.m_renderPass, false);
+        }
         if (renderType == RenderType::MSAA) {
             msaaSamples = maxMsaaSamples;
             vkDeviceWaitIdle(device.vkDevice);
+            if (CubeMapPipeline.m_pipeline != VK_NULL_HANDLE) {
+                CubeMapPipeline.Destroy();
+            }
             cleanupSwapChain();
             renderPass.DestroyRenderPass();
             pipeline.Destroy();
@@ -408,13 +504,30 @@ public:
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState().createPipelineLayout(
                         {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                        VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
+                        VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
-                    .createPipeline(swapChain, renderPass.m_renderPass);
+                    .createPipeline(swapChain, renderPass.m_renderPass, true);
+
+            CubeMapPipeline.initial(device.vkDevice).
+                    setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
+                    .setRasterizerState()
+                    .setMultisampleState(msaaSamples)
+                    .setColorBlendState().setDepthStencilState().createPipelineLayout(
+                        {
+                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout
+                        }, //使用了几个Sets
+                        NULL,NULL
+                    )
+                    .createPipeline(swapChain
+                                    , renderPass.m_renderPass, false);
         }
         if (renderType == RenderType::NORMAL) {
             msaaSamples = VK_SAMPLE_COUNT_1_BIT;
             vkDeviceWaitIdle(device.vkDevice);
+            if (CubeMapPipeline.m_pipeline != VK_NULL_HANDLE) {
+                CubeMapPipeline.Destroy();
+            }
             cleanupSwapChain();
             renderPass.DestroyRenderPass();
             pipeline.Destroy();
@@ -431,16 +544,16 @@ public:
                 presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
             pipeline.initial(device.vkDevice).
-            setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
-            .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
+                    setShader("../ProgramCode/Shaders/spv/glTFvert.spv", ShaderStage::VERT)
+                    .setShader("../ProgramCode/Shaders/spv/glTFfrag.spv", ShaderStage::FRAG)
                     .setRasterizerState()
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState()
                     .createPipelineLayout(
                         {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
-                        VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4)
+                        VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
-                    .createPipeline(swapChain, renderPass.m_renderPass);
+                    .createPipeline(swapChain, renderPass.m_renderPass, 1);
         }
     }
 

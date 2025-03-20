@@ -23,7 +23,7 @@ namespace VK::Render {
             Pipeline& initial(const VkDevice& device);
             VkPipeline m_pipeline{};
             void createPipeline( const SwapChain& swapChain,
-                const VkRenderPass& renderPass);
+                const VkRenderPass& renderPass, const bool& HasVertex);
             Pipeline& setShader(const std::string& path, ShaderStage stage);
             Pipeline& setRasterizerState(
                 const VkBool32& rasterizerDiscardEnable = VK_FALSE,

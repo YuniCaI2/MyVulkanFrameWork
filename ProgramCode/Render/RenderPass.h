@@ -13,6 +13,7 @@ namespace VK::Render {
     public:
         VkRenderPass m_renderPass;
         VkSampleCountFlagBits sampleCount{VK_SAMPLE_COUNT_1_BIT};
+        RenderPassType renderPassType{};
         void setAttachmentDescription(const VkAttachmentDescription& attachmentDescription);
         void setAttachmentReference(const VkAttachmentReference& attachmentReference);
         void setSubpassDescription(const VkSubpassDescription& subpassDescription);

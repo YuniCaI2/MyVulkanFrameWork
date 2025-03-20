@@ -43,11 +43,11 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
     Buffer rawImageData{};
     cv::Mat image = cv::imread(Path, cv::IMREAD_UNCHANGED);
     std::cout << "Image depth:" << image.depth() << std::endl;
-    std::cout << cv::getBuildInformation() << std::endl;
+    // cv::imshow(Path, image);
     if (image.empty()) {
         throw std::runtime_error("无法加载纹理图像: " + Path); // 加载失败抛出异常
     }
-    cv::cvtColor(image, image, cv::COLOR_BGRA2RGBA); // 转换图像格式为 RGBA
+
     if (image.depth() == CV_16U || image.depth() == CV_16F) {
         auto imageData = reinterpret_cast<uint16_t *>(image.data);
         VkDeviceSize imageSize = image.rows * image.cols * 8;
@@ -163,7 +163,6 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     descriptorRawImageInfo.imageView = rawImage.imageView;
 
     VkDescriptorImageInfo descriptorImageInfo{};
-    descriptorImageInfo.sampler = sampler;
     descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     descriptorImageInfo.imageView = image.imageView;
 

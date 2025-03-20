@@ -195,9 +195,9 @@ void Utils::transitionImageLayout(const VK::Device &device, const VkCommandPool 
         oldLayout == VK_IMAGE_LAYOUT_GENERAL &&
         newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     ) {
-        barrier.srcAccessMask = 0;
+        barrier.srcAccessMask = 0 ;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;//为了CUBEMAP
     }
     else {

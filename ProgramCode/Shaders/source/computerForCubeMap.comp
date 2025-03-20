@@ -20,7 +20,7 @@ vec3 uvToDirection(vec2 uv, uint face) {
 
 vec2 directionToEquiUV(vec3 dir) {
     float theta = atan(dir.z, dir.x);
-    float phi = asin(dir.y);
+    float phi = - asin(dir.y);
     return vec2((theta / (2.0 * PI)) + 0.5, (phi / PI) + 0.5);
 }
 
@@ -35,5 +35,7 @@ void main() {
     vec2 equiUV = directionToEquiUV(dir);
     vec4 color = texture(equirectangularMap, equiUV);
 
+
     imageStore(cubemap, ivec3(texel, face), color);
+//    imageStore(cubemap, ivec3(gl_GlobalInvocationID), vec4(1.0, 0.0, 0.0, 1.0));
 }

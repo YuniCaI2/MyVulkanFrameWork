@@ -138,6 +138,22 @@ void GUI::imguiDraw::DrawUI() {
     ImGui::SliderFloat3("LightColor",rgb , 0.0f, 500.0f);
     vulkanInstance->lights[0].setColor(glm::vec3(rgb[0],rgb[1],rgb[2]));
 
+
+    ImGui::Text("CUBEMAP:");
+    static int radioValue2 = 0;
+    ImGui::RadioButton("OFFCUBEMAP", &radioValue2, 0); ImGui::SameLine();
+    ImGui::RadioButton("CUBEMAP", &radioValue2, 1);
+    if (radioValue2 == 0) {
+        ImGui::Text("OFFCUBEMAP");
+        vulkanInstance->hasCubeMap = false;
+        vulkanInstance->renderType = RenderType::NORMAL;
+    } else if (radioValue2 == 1) {
+        ImGui::Text("CUBEMAP");
+        vulkanInstance->hasCubeMap = true;
+        vulkanInstance->renderType = RenderType::IBLMSAA;
+    }
+
+
     // 添加 UI 控件...
     ImGui::End();
 }

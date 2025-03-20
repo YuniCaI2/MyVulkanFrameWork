@@ -14,7 +14,8 @@ constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 enum class RenderPassType {
     FORWARD,
     GUI,
-    MSAA
+    MSAA,
+    IBLMSAA
 };
 
 namespace Utils {

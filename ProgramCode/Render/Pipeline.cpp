@@ -16,7 +16,8 @@ VK::Render::Pipeline &VK::Render::Pipeline::initial(const VkDevice &device) {
     return *this;
 }
 
-void VK::Render::Pipeline::createPipeline(const SwapChain &swapChain, const VkRenderPass &renderPass) {
+void VK::Render::Pipeline::createPipeline(const SwapChain &swapChain, const VkRenderPass &renderPass,
+                                          const bool &HasVertex) {
     this->swapChain = swapChain;
     VkPipelineDynamicStateCreateInfo dynamicState = setDynamicState();
     //设置顶点布局
@@ -32,6 +33,12 @@ void VK::Render::Pipeline::createPipeline(const SwapChain &swapChain, const VkRe
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
     // 表示顶点属性描述符的数量(可以对应openGL中的顶点布局)
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data(); // Optional
+    if(!HasVertex) {
+        vertexInputInfo.vertexBindingDescriptionCount = 0; // 如果没有顶点缓冲区绑定
+        vertexInputInfo.pVertexBindingDescriptions = nullptr;
+        vertexInputInfo.vertexAttributeDescriptionCount = 0; // 如果没有顶点属性
+        vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+    }
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -89,6 +96,9 @@ void VK::Render::Pipeline::createPipeline(const SwapChain &swapChain, const VkRe
     pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
+    if(! HasVertex) {
+        pipelineInfo.subpass = 1;
+    }
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1; //没有派生管线
 
@@ -160,18 +170,25 @@ VK::Render::Pipeline &VK::Render::Pipeline::setMultisampleState(const VkSampleCo
 VK::Render::Pipeline &VK::Render::Pipeline::createPipelineLayout(const std::vector<VkDescriptorSetLayout> &SetLayouts,
                                                                  const VkShaderStageFlags &setShaderStages,
                                                                  const uint32_t &size) {
-    VkPushConstantRange pushConstantRange = {};
-    pushConstantRange.size = size;
-    pushConstantRange.stageFlags = setShaderStages;
-    pushConstantRange.offset = 0;
-
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    if (setShaderStages != NULL) {
+        VkPushConstantRange pushConstantRange = {};
+        pushConstantRange.size = size;
+        pushConstantRange.stageFlags = setShaderStages;
+        pushConstantRange.offset = 0;
+
 
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
         pipelineLayoutInfo.pSetLayouts = SetLayouts.data();
+    }
+    if (setShaderStages == NULL) {
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts = SetLayouts.data();
+    }
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
@@ -237,6 +254,7 @@ void VK::Render::Pipeline::Destroy() {
     this->shaders.clear();
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyPipeline(device, m_pipeline, nullptr);
+    m_pipeline = VK_NULL_HANDLE;
 }
 
 VkPipelineDynamicStateCreateInfo VK::Render::Pipeline::setDynamicState() {

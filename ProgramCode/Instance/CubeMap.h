@@ -13,9 +13,9 @@ namespace VK::Instances {
         void createCubeMap(const VK::Device& device, const VkCommandPool& commandPool, const VkSampler& sampler,const std::string& cubeMapPath);
         void Destroy() const;
         Image image{};
+        Image rawImage{};
 
     private:
-        Image rawImage{};
         VkDevice m_Device{};
         VkDescriptorPool descriptorPool{};
         VkDescriptorSetLayout descriptorSetLayout{};
