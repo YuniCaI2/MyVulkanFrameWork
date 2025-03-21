@@ -271,14 +271,14 @@ public:
         //recreate
         swapChain.createSwapChain(device.physicalDevice, device, window, surface.m_surface);
         depthResource.createDepthResources(device, swapChain.extent, msaaSamples, swapChain.swapChainImages.size());
-        if (renderType == RenderType::MSAA) {
+        if (renderType == RenderType::MSAA || renderType == RenderType::IBLMSAA) {
             colorResource.createColorResources(device, swapChain.extent, swapChain.format, msaaSamples,
                                                swapChain.swapChainImages.size());
             for (auto i = 0; i < presentFrameBuffers.size(); ++i) {
                 std::vector<VkImageView> attachments{};
                 attachments.push_back(colorResource.getImageViews()[i]);
-                attachments.push_back(swapChain.swapChainImageViews[i]);
                 attachments.push_back(depthResource.getImageViews()[i]);
+                attachments.push_back(swapChain.swapChainImageViews[i]);//保证顺序正确//保证资源在合适时机销毁
                 presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
         } else {
@@ -296,7 +296,7 @@ public:
         for (const auto &framebuffer: presentFrameBuffers) {
             framebuffer.destroyFrameBuffers();
         }
-        if (renderType == RenderType::MSAA) {
+        if (renderType == RenderType::MSAA || renderType == RenderType::IBLMSAA) {
             colorResource.destroyColorResources();
         }
         depthResource.destroyDepthResources();
@@ -320,7 +320,7 @@ public:
 
         if (!(RenderType::MSAA == renderType || RenderType::IBLMSAA == renderType)) {
             colorResource.destroyColorResources();
-            //保证删除color Resource
+            //保证删除color Resource删除
         }
 
         pipeline.Destroy();
@@ -401,20 +401,6 @@ public:
         //MSAA参数：
         maxMsaaSamples = Utils::getMaxUsableSampleCount(device.physicalDevice);
 
-
-        // CubeMapPipeline.initial(device.vkDevice).
-        //         setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
-        //         .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
-        //         .setRasterizerState()
-        //         .setMultisampleState(msaaSamples)
-        //         .setColorBlendState().setDepthStencilState().createPipelineLayout(
-        //             {
-        //                 descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout
-        //             }, //使用了几个Sets
-        //             NULL,NULL
-        //         )
-        //         .createPipeline(swapChain
-        //                         , renderPass.m_renderPass, true);
     }
 
     void recreateRenderResource(RenderType currentRenderType) {
@@ -448,6 +434,7 @@ public:
                         VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass, 1);
+            if (CubeMapPipeline.m_pipeline == VK_NULL_HANDLE)
             CubeMapPipeline.initial(device.vkDevice).
                     setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
                     .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
@@ -477,9 +464,6 @@ public:
         if (renderType == RenderType::MSAA) {
             msaaSamples = maxMsaaSamples;
             vkDeviceWaitIdle(device.vkDevice);
-            if (CubeMapPipeline.m_pipeline != VK_NULL_HANDLE) {
-                CubeMapPipeline.Destroy();
-            }
             cleanupSwapChain();
             renderPass.DestroyRenderPass();
             pipeline.Destroy();
@@ -507,27 +491,10 @@ public:
                         VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass, true);
-
-            CubeMapPipeline.initial(device.vkDevice).
-                    setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
-                    .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
-                    .setRasterizerState()
-                    .setMultisampleState(msaaSamples)
-                    .setColorBlendState().setDepthStencilState().createPipelineLayout(
-                        {
-                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout
-                        }, //使用了几个Sets
-                        NULL,NULL
-                    )
-                    .createPipeline(swapChain
-                                    , renderPass.m_renderPass, false);
         }
         if (renderType == RenderType::NORMAL) {
             msaaSamples = VK_SAMPLE_COUNT_1_BIT;
             vkDeviceWaitIdle(device.vkDevice);
-            if (CubeMapPipeline.m_pipeline != VK_NULL_HANDLE) {
-                CubeMapPipeline.Destroy();
-            }
             cleanupSwapChain();
             renderPass.DestroyRenderPass();
             pipeline.Destroy();

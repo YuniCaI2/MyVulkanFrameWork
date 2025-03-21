@@ -21,7 +21,7 @@ namespace VK::Render {
             VkPipelineLayout pipelineLayout{};
 
             Pipeline& initial(const VkDevice& device);
-            VkPipeline m_pipeline{};
+            VkPipeline m_pipeline{VK_NULL_HANDLE};
             void createPipeline( const SwapChain& swapChain,
                 const VkRenderPass& renderPass, const bool& HasVertex);
             Pipeline& setShader(const std::string& path, ShaderStage stage);

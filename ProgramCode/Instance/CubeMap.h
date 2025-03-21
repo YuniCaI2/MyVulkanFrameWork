@@ -13,6 +13,7 @@ namespace VK::Instances {
         void createCubeMap(const VK::Device& device, const VkCommandPool& commandPool, const VkSampler& sampler,const std::string& cubeMapPath);
         void Destroy() const;
         Image image{};
+        Image diffuseLightImage{};
         Image rawImage{};
 
     private:

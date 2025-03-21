@@ -3,6 +3,7 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(binding = 0) uniform sampler2D equirectangularMap;
 layout(binding = 1, rgba32f) uniform imageCube cubemap;
+layout(binding = 2, rgba32f) uniform imageCube diffuseLightImage;
 
 const float PI = 3.14159265359;
 

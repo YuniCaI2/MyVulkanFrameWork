@@ -35,6 +35,7 @@ void VK::Instances::CubeMap::Destroy() const {
     vkDestroyDescriptorSetLayout(m_Device, descriptorSetLayout, nullptr);
     vkDestroyDescriptorPool(m_Device, descriptorPool, nullptr);
     image.destroyImage();
+    diffuseLightImage.destroyImage();
 }
 
 
@@ -107,12 +108,23 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
         Utils::transitionImageLayout(device, commandPool, this->image.image, VK_FORMAT_R32G32B32A32_SFLOAT,
                                      VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_GENERAL, 1, 6);
+
+        //模糊的环境贴图用作diffuse光照
+        this->diffuseLightImage.createImage(device, 1024, 1024, 1, 6,
+                        VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
+                        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        this->diffuseLightImage.imageView = Utils::createImageView(device.vkDevice, this->diffuseLightImage.image,
+                                                       VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 1, 6);
+        Utils::transitionImageLayout(device, commandPool, this->diffuseLightImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
+                                     VK_IMAGE_LAYOUT_UNDEFINED,
+                                     VK_IMAGE_LAYOUT_GENERAL, 1, 6);
     }
     rawImageData.destroyBuffer();
 }
 
 void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const VkSampler &sampler) {
-    VkDescriptorSetLayoutBinding bindings[2] = {};
+    VkDescriptorSetLayoutBinding bindings[3] = {};
     bindings[0].binding = 0;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     bindings[0].descriptorCount = 1;
@@ -123,9 +135,14 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     bindings[1].descriptorCount = 1;
     bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+    bindings[2].binding = 2;
+    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    bindings[2].descriptorCount = 1;
+    bindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 2;
+    layoutInfo.bindingCount = 3;
     layoutInfo.pBindings = bindings;
 
     if (vkCreateDescriptorSetLayout(device.vkDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
@@ -138,7 +155,7 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptorPoolSize.descriptorCount = 1;
     poolSizes.push_back(descriptorPoolSize);
-    descriptorPoolSize.descriptorCount = 1;
+    descriptorPoolSize.descriptorCount = 2;//包括一个环境模糊图
     descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes.push_back(descriptorPoolSize);
 
@@ -166,7 +183,11 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     descriptorImageInfo.imageView = image.imageView;
 
-    VkWriteDescriptorSet writes[2] = {};
+    VkDescriptorImageInfo descriptorDffuseLightImageInfo{};
+    descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    descriptorImageInfo.imageView = diffuseLightImage.imageView;
+
+    VkWriteDescriptorSet writes[3] = {};
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].dstSet = descriptorSet;
     writes[0].dstBinding = 0;
@@ -180,6 +201,13 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     writes[1].descriptorCount = 1;
     writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     writes[1].pImageInfo = &descriptorImageInfo;
+
+    writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[2].dstSet = descriptorSet;
+    writes[2].dstBinding = 2;
+    writes[2].descriptorCount = 1;
+    writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    writes[2].pImageInfo = &descriptorDffuseLightImageInfo;
 
     vkUpdateDescriptorSets(device.vkDevice, 2, writes, 0, nullptr);
 
