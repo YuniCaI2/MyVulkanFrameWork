@@ -5,6 +5,10 @@ layout(binding = 0) uniform sampler2D equirectangularMap;
 layout(binding = 1, rgba32f) uniform imageCube cubemap;
 layout(binding = 2, rgba32f) uniform imageCube diffuseLightImage;
 
+layout(push_constant) uniform PushConstants {
+    vec2 size;
+} rawImageInfo;
+
 const float PI = 3.14159265359;
 
 vec3 uvToDirection(vec2 uv, uint face) {

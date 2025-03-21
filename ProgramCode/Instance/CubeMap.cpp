@@ -3,6 +3,8 @@
 //
 
 #include "CubeMap.h"
+
+#include <glm/fwd.hpp>
 #include<opencv2/opencv.hpp>
 
 void VK::Instances::CubeMap::createCubeMap(const VK::Device &device, const VkCommandPool &commandPool,
@@ -16,6 +18,7 @@ void VK::Instances::CubeMap::createCubeMap(const VK::Device &device, const VkCom
 
     VkCommandBuffer commandBuffer = Utils::beginSingleTimeCommands(device, commandPool);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
+    vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(glm::vec2), &rawImageSize);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout,
         0, 1,&descriptorSet, 0, nullptr);
     uint32_t groupCountX = 1024 / 32;
@@ -42,6 +45,8 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
                                              const std::string &Path) {
     Buffer rawImageData{};
     cv::Mat image = cv::imread(Path, cv::IMREAD_UNCHANGED);
+    rawImageSize.x = image.cols;
+    rawImageSize.y = image.rows;
     std::cout << "Image depth:" << image.depth() << std::endl;
     // cv::imshow(Path, image);
     if (image.empty()) {
@@ -183,8 +188,8 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     descriptorImageInfo.imageView = image.imageView;
 
     VkDescriptorImageInfo descriptorDffuseLightImageInfo{};
-    descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    descriptorImageInfo.imageView = diffuseLightImage.imageView;
+    descriptorDffuseLightImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    descriptorDffuseLightImageInfo.imageView = diffuseLightImage.imageView;
 
     VkWriteDescriptorSet writes[3] = {};
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -221,18 +226,26 @@ void VK::Instances::CubeMap::LoadShader(
 
 void VK::Instances::CubeMap::LoadPipeline(const VK::Device &device, const VkCommandPool &commandPool) {
 
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.size = sizeof(glm::vec2);
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layoutInfo.setLayoutCount = 1;
     layoutInfo.pSetLayouts = &descriptorSetLayout;
-    layoutInfo.pushConstantRangeCount = 0;
+    layoutInfo.pushConstantRangeCount = 1;
+    layoutInfo.pPushConstantRanges = &pushConstantRange;
 
     vkCreatePipelineLayout(device.vkDevice, &layoutInfo, nullptr, &computePipelineLayout);
 
     VkComputePipelineCreateInfo pipelineInfo = {};
+
     pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipelineInfo.stage = computeShader.getPipelineShaderStageCreateInfo();
     pipelineInfo.layout = computePipelineLayout;
+
     vkCreateComputePipelines(device.vkDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline);
     computeShader.DestroyShaderModule();
 }
