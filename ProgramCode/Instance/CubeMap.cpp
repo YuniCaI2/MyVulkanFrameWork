@@ -38,6 +38,7 @@ void VK::Instances::CubeMap::Destroy() const {
     vkDestroyDescriptorSetLayout(m_Device, descriptorSetLayout, nullptr);
     vkDestroyDescriptorPool(m_Device, descriptorPool, nullptr);
     image.destroyImage();
+    diffuseLightImage.destroyImage();
 }
 
 

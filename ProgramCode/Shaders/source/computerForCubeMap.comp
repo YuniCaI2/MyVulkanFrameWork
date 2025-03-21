@@ -30,6 +30,15 @@ vec2 directionToEquiUV(vec3 dir) {
 }
 
 void main() {
+    float kernel[25] = float[](
+    0.003663, 0.014652, 0.025641, 0.014652, 0.003663,
+    0.014652, 0.058608, 0.095238, 0.058608, 0.014652,
+    0.025641, 0.095238, 0.150150, 0.095238, 0.025641,
+    0.014652, 0.058608, 0.095238, 0.058608, 0.014652,
+    0.003663, 0.014652, 0.025641, 0.014652, 0.003663
+    );
+
+
     ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
     if (texel.x >= 1024 || texel.y >= 1024) return; // 边界检查
 
@@ -39,8 +48,18 @@ void main() {
     vec3 dir = uvToDirection(uv, face);
     vec2 equiUV = directionToEquiUV(dir);
     vec4 color = texture(equirectangularMap, equiUV);
+    vec2 pixelPos = vec2(rawImageInfo.size.x * equiUV.x, rawImageInfo.size.y * equiUV.y);
+    vec3 blurColor = vec3(0.0,0.0,0.0);
 
-
+    for(int i = 0; i < 5; i ++){
+        int tempI = i - 2;
+        for(int j = 0; j < 5; j++){
+            int tempJ = j - 2;
+            vec2 offsetPos = vec2((pixelPos.x + tempJ) / rawImageInfo.size.x, (pixelPos.y + tempI) / rawImageInfo.size.y);
+            blurColor += kernel[i * 5 + j] * texture(equirectangularMap, offsetPos);
+        }
+    }
+    imageStore(diffuseLightImage, ivec3(blurColor));
     imageStore(cubemap, ivec3(texel, face), color);
 //    imageStore(cubemap, ivec3(gl_GlobalInvocationID), vec4(1.0, 0.0, 0.0, 1.0));
 }
