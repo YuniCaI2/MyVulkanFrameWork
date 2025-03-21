@@ -4,6 +4,8 @@
 
 #ifndef CUBEMAP_H
 #define CUBEMAP_H
+#include <glm/vec2.hpp>
+
 #include "Image.h"
 #include "Buffer.h"
 #include "../Render/Shader.h"
@@ -13,10 +15,11 @@ namespace VK::Instances {
         void createCubeMap(const VK::Device& device, const VkCommandPool& commandPool, const VkSampler& sampler,const std::string& cubeMapPath);
         void Destroy() const;
         Image image{};
-        Image diffuseLightImage{};
         Image rawImage{};
+        Image diffuseLightImage{};
 
     private:
+        glm::vec2 rawImageSize{};
         VkDevice m_Device{};
         VkDescriptorPool descriptorPool{};
         VkDescriptorSetLayout descriptorSetLayout{};
