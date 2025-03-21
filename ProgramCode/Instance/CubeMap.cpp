@@ -35,7 +35,6 @@ void VK::Instances::CubeMap::Destroy() const {
     vkDestroyDescriptorSetLayout(m_Device, descriptorSetLayout, nullptr);
     vkDestroyDescriptorPool(m_Device, descriptorPool, nullptr);
     image.destroyImage();
-    diffuseLightImage.destroyImage();
 }
 
 
@@ -209,7 +208,7 @@ void VK::Instances::CubeMap::createDescriptor(const VK::Device &device, const Vk
     writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     writes[2].pImageInfo = &descriptorDffuseLightImageInfo;
 
-    vkUpdateDescriptorSets(device.vkDevice, 2, writes, 0, nullptr);
+    vkUpdateDescriptorSets(device.vkDevice, 3, writes, 0, nullptr);
 
     // 创建布局、池和描述符集（省略细节）
 }
