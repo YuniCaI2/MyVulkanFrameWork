@@ -39,6 +39,7 @@ const bool constexpr enableValidationLayers = true;
 // #define MODEL_PATH "D:/Model/blue-archive-sunohara-kokona/cocona.obj"
 #define CUBEMAP_PATH "D:/Model/cubemap1.exr"
 #define MODEL_PATH "D:/Model/DamagedHelmet.gltf"
+#define LUT_PATH "D:/Visual Studio Project/MyVulkanFrameWork/LUT/ibl_brdf_lut.png"
 #elif defined(__APPLE__) && defined(__MACH__)
 // #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
 #define MODEL_PATH "/Users/yunicai/Model/DamagedHelmet.gltf"
@@ -121,6 +122,8 @@ public:
     //cubemap
     VK::Instances::CubeMap cubeMap{};
     VK::Render::Pipeline CubeMapPipeline{};
+    //IBL LUT
+    VK::Instances::Image LUTImage{};
 
 public:
     void recordCommandBuffer(const VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
@@ -168,12 +171,17 @@ public:
         scissor.extent = swapChain.extent;
         scissor.offset = {0, 0};
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, lights);
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline.pipelineLayout, 0, 1,
                                 &descriptorManager.uniformDescriptorSets[currentFrame], 0, nullptr);
-
-        VK::Instances::UniformBuffer::update(uniformBuffers[currentFrame], swapChain.extent, myCamera, lights);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeline.pipelineLayout, 2, 1,
+                                &descriptorManager.textureDescriptorSets[0], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pipeline.pipelineLayout, 3, 1,
+                        &descriptorManager.textureDescriptorSets[1], 0, nullptr);
 
         model.draw(commandBuffer, pipeline.pipelineLayout);
 
@@ -278,7 +286,7 @@ public:
                 std::vector<VkImageView> attachments{};
                 attachments.push_back(colorResource.getImageViews()[i]);
                 attachments.push_back(depthResource.getImageViews()[i]);
-                attachments.push_back(swapChain.swapChainImageViews[i]);//保证顺序正确//保证资源在合适时机销毁
+                attachments.push_back(swapChain.swapChainImageViews[i]); //保证顺序正确//保证资源在合适时机销毁
                 presentFrameBuffers[i].createFrameBuffers(device, renderPass, swapChain, attachments);
             }
         } else {
@@ -305,6 +313,7 @@ public:
 
 
     void cleanup() {
+        LUTImage.destroyImage();
         if (CubeMapPipeline.m_pipeline != VK_NULL_HANDLE) {
             CubeMapPipeline.Destroy();
         }
@@ -351,7 +360,7 @@ public:
 
         //初始化场景
         model.LoadModel(device, MODEL_PATH, ModelType::glTF, commandBufferManager.commandPool);
-        light.setColor(glm::vec3(23.47 * 10, 21.31 * 10, 20.79 * 10));
+        light.setColor(glm::vec3(23.47 * 5, 21.31 * 5, 20.79 * 5));
         // light.setColor(glm::vec3(0.0f, 1.0f,0.0f));
         light.setPosition(glm::vec3(6.0f, 1.0f, -5.0f));
         lights.resize(2);
@@ -359,6 +368,8 @@ public:
         lights[1].setColor(glm::vec3(23.47, 21.31, 20.79));
         lights[1].setPosition(glm::vec3(-6.0f, 1.0f, -5.0f)); //副光源
         cubeMap.createCubeMap(device, commandBufferManager.commandPool, model.sampler.sampler, CUBEMAP_PATH);
+        //IBL LUT加载
+        Utils::LoadSingleImage(LUTImage, LUT_PATH, device, commandBufferManager.commandPool, 1);
 
         //设置uniform
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -377,6 +388,7 @@ public:
             descriptorManager.setUniformBuffer(uniformBuffer.buffer.buffer);
         }
         descriptorManager.setImageView(cubeMap.image.imageView);
+        descriptorManager.setImageView(LUTImage.imageView);
         descriptorManager.setMaxSets(model.meshes.size() + uniformBuffers.size() + 10);
         descriptorManager.createSets();
 
@@ -389,7 +401,7 @@ public:
                 .setColorBlendState().setDepthStencilState().createPipelineLayout(
                     {
                         descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,
-                        descriptorManager.textureDescriptorSetLayout
+                        descriptorManager.textureDescriptorSetLayout,descriptorManager.textureDescriptorSetLayout
                     }, //使用了几个Sets
                     VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                 )
@@ -400,7 +412,6 @@ public:
                                            swapChain.swapChainImages.size());
         //MSAA参数：
         maxMsaaSamples = Utils::getMaxUsableSampleCount(device.physicalDevice);
-
     }
 
     void recreateRenderResource(RenderType currentRenderType) {
@@ -430,35 +441,39 @@ public:
                     .setRasterizerState()
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState().createPipelineLayout(
-                        {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                        {
+                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,
+                            descriptorManager.textureDescriptorSetLayout,descriptorManager.textureDescriptorSetLayout
+                        }, //使用了几个Sets,
                         VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass, 1);
             if (CubeMapPipeline.m_pipeline == VK_NULL_HANDLE)
-            CubeMapPipeline.initial(device.vkDevice).
-                    setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
-                    .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
-                    .setRasterizerState(
-                        VK_FALSE,
-                        VK_POLYGON_MODE_FILL,
-                        VK_CULL_MODE_FRONT_BIT,
-                        VK_FRONT_FACE_COUNTER_CLOCKWISE,
-                        1.0f,
-                        VK_FALSE,
-                        0.0f,
-                        0.0f,
-                        0.0f,
-                        VK_FALSE
-                    )
-                    .setMultisampleState(msaaSamples)
-                    .setColorBlendState().setDepthStencilState().createPipelineLayout(
-                        {
-                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout
-                        }, //使用了几个Sets
-                        NULL,NULL
-                    )
-                    .createPipeline(swapChain
-                                    , renderPass.m_renderPass, false);
+                CubeMapPipeline.initial(device.vkDevice).
+                        setShader("../ProgramCode/Shaders/spv/cubemapVert.spv", ShaderStage::VERT)
+                        .setShader("../ProgramCode/Shaders/spv/cubemapFrag.spv", ShaderStage::FRAG)
+                        .setRasterizerState(
+                            VK_FALSE,
+                            VK_POLYGON_MODE_FILL,
+                            VK_CULL_MODE_FRONT_BIT,
+                            VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                            1.0f,
+                            VK_FALSE,
+                            0.0f,
+                            0.0f,
+                            0.0f,
+                            VK_FALSE
+                        )
+                        .setMultisampleState(msaaSamples)
+                        .setColorBlendState().setDepthStencilState().createPipelineLayout(
+                            {
+                                descriptorManager.uniformDescriptorSetLayout,
+                                descriptorManager.textureDescriptorSetLayout
+                            }, //使用了几个Sets
+                            NULL,NULL
+                        )
+                        .createPipeline(swapChain
+                                        , renderPass.m_renderPass, false);
         }
         if (renderType == RenderType::MSAA) {
             msaaSamples = maxMsaaSamples;
@@ -486,7 +501,10 @@ public:
                     .setRasterizerState()
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState().createPipelineLayout(
-                        {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                        {
+                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,
+                            descriptorManager.textureDescriptorSetLayout,descriptorManager.textureDescriptorSetLayout
+                        },
                         VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass, true);
@@ -516,7 +534,10 @@ public:
                     .setMultisampleState(msaaSamples)
                     .setColorBlendState().setDepthStencilState()
                     .createPipelineLayout(
-                        {descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout},
+                        {
+                            descriptorManager.uniformDescriptorSetLayout, descriptorManager.textureDescriptorSetLayout,
+                            descriptorManager.textureDescriptorSetLayout,descriptorManager.textureDescriptorSetLayout
+                        },
                         VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4)
                     )
                     .createPipeline(swapChain, renderPass.m_renderPass, 1);

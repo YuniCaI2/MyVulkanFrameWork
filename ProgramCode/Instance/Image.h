@@ -15,6 +15,8 @@ namespace VK::Instances {
         VkImage image{};
         VkImageView imageView{};
         VkDeviceMemory imageMemory{};
+        uint32_t mipmapLevels{};
+        uint32_t arrayNum{};
         void *data{nullptr};
 
         void Map();
@@ -37,7 +39,6 @@ namespace VK::Instances {
         VkFormat format{};
     private:
         VkDeviceSize size{};
-        uint32_t arrayNum{};
         VK::Device device{};
     };
 }

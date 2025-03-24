@@ -270,21 +270,22 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device& device, con
             stagingBuffer.UnMap();  // 取消映射
 
             // 创建 Vulkan 图像
-            mesh.texture.image.createImage(device, resizedImage.cols, resizedImage.rows, 1, 1,
+            mesh.texture.image.createImage(device, resizedImage.cols, resizedImage.rows, 6, 1,
                                            VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
                                            VK_IMAGE_TILING_OPTIMAL,
-                                           VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                           VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             Utils::transitionImageLayout(device, commandPool, mesh.texture.image.image,
                                          VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1);  // 转换图像布局为传输目标
+                                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6, 1);  // 转换图像布局为传输目标
             mesh.texture.image.copy(stagingBuffer.buffer, commandPool);  // 复制数据到图像
-            Utils::transitionImageLayout(device, commandPool, mesh.texture.image.image,
-                                         VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 1);  // 转换图像布局为着色器可读
+            Utils::generateMipmaps(mesh.texture.image, device, commandPool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            // Utils::transitionImageLayout(device, commandPool, mesh.texture.image.image,
+            //                              VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            //                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, 1);  // 转换图像布局为着色器可读
             stagingBuffer.destroyBuffer();  // 销毁暂存缓冲区
             mesh.texture.image.imageView = Utils::createImageView(device.vkDevice, mesh.texture.image.image,
-                                                                  VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1,1);  // 创建图像视图
+                                                                  VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 6,1);  // 创建图像视图
             descriptorManager.setImageView(mesh.texture.image.imageView);  // 设置图像视图到描述符管理器
         }
     } else if (modelType == ModelType::glTF) {  // 处理 glTF 模型的纹理
@@ -309,21 +310,22 @@ void VK::Instances::Model::createModelTextureImage(const VK::Device& device, con
                 stagingBuffer.UnMap();  // 取消映射
 
                 // 创建 Vulkan 图像
-                mesh.texture.image.createImage(device,  mesh.texture.image.width,  mesh.texture.image.height, 1, 5,
+                mesh.texture.image.createImage(device,  mesh.texture.image.width,  mesh.texture.image.height, 6, 5,
                                                VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
                                                VK_IMAGE_TILING_OPTIMAL,
-                                               VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                               VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
                 Utils::transitionImageLayout(device, commandPool, mesh.texture.image.image,
                                              VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 5);  // 转换图像布局
+                                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6, 5);  // 转换图像布局
                 mesh.texture.image.copy(stagingBuffer.buffer, commandPool);  // 复制数据到图像
-                Utils::transitionImageLayout(device, commandPool, mesh.texture.image.image,
-                                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 5);  // 转换图像布局
+                Utils::generateMipmaps(mesh.texture.image, device, commandPool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                // Utils::transitionImageLayout(device, commandPool, mesh.texture.image.image,
+                //                              VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                //                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6, 5);  // 转换图像布局
                 stagingBuffer.destroyBuffer();  // 销毁暂存缓冲区
                 mesh.texture.image.imageView = Utils::createImageView(device.vkDevice, mesh.texture.image.image,
-                                                                      VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1,5);  // 创建图像视图
+                                                                      VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 6,5);  // 创建图像视图
                 descriptorManager.setImageView(mesh.texture.image.imageView);  // 设置图像视图
             }
         }

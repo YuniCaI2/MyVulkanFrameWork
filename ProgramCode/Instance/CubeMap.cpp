@@ -28,7 +28,12 @@ void VK::Instances::CubeMap::createCubeMap(const VK::Device &device, const VkCom
     Utils::endSingleTimeCommands(device, commandPool, commandBuffer);
     Utils::transitionImageLayout(device, commandPool, this->image.image, this->image.format,
                              VK_IMAGE_LAYOUT_GENERAL,
-                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 6);
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6, 6);
+    Utils::transitionImageLayout(device, commandPool, this->diffuseLightImage.image, this->image.format,
+                             VK_IMAGE_LAYOUT_GENERAL,
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 6, 6);
+    Utils::generateMipmaps(this->image, device, commandPool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    Utils::generateMipmaps(this->diffuseLightImage, device, commandPool,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 }
 
 void VK::Instances::CubeMap::Destroy() const {
@@ -74,15 +79,15 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
                                                     VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
         Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R16G16B16A16_SFLOAT,
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 1);
-        this->image.createImage(device, 1024, 1024, 1, 6,
+        this->image.createImage(device, 1024, 1024, 6, 6,
                                 VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
-                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         this->image.imageView = Utils::createImageView(device.vkDevice, this->image.image,
-                                                       VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 1, 6);
+                                                       VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 6, 6);
         Utils::transitionImageLayout(device, commandPool, this->image.image, VK_FORMAT_R16G16B16A16_SFLOAT,
                                      VK_IMAGE_LAYOUT_UNDEFINED,
-                                     VK_IMAGE_LAYOUT_GENERAL, 1, 6);
+                                     VK_IMAGE_LAYOUT_GENERAL, 6, 6);
     }
     if (image.depth() == CV_32F) {
         auto imageData = reinterpret_cast<uint32_t *>(image.data);
@@ -104,26 +109,26 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
                                                     VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
         Utils::transitionImageLayout(device, commandPool, rawImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 1);
-        this->image.createImage(device, 1024, 1024, 1, 6,
+        this->image.createImage(device, 1024, 1024, 6, 6,
                                 VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
-                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         this->image.imageView = Utils::createImageView(device.vkDevice, this->image.image,
-                                                       VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 1, 6);
+                                                       VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 6, 6);
         Utils::transitionImageLayout(device, commandPool, this->image.image, VK_FORMAT_R32G32B32A32_SFLOAT,
                                      VK_IMAGE_LAYOUT_UNDEFINED,
-                                     VK_IMAGE_LAYOUT_GENERAL, 1, 6);
+                                     VK_IMAGE_LAYOUT_GENERAL, 6, 6);
 
         //模糊的环境贴图用作diffuse光照
-        this->diffuseLightImage.createImage(device, 1024, 1024, 1, 6,
+        this->diffuseLightImage.createImage(device, 1024, 1024, 6, 6,
                         VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
-                        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         this->diffuseLightImage.imageView = Utils::createImageView(device.vkDevice, this->diffuseLightImage.image,
-                                                       VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 1, 6);
+                                                       VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 6, 6);
         Utils::transitionImageLayout(device, commandPool, this->diffuseLightImage.image, VK_FORMAT_R32G32B32A32_SFLOAT,
                                      VK_IMAGE_LAYOUT_UNDEFINED,
-                                     VK_IMAGE_LAYOUT_GENERAL, 1, 6);
+                                     VK_IMAGE_LAYOUT_GENERAL, 6, 6);
     }
     rawImageData.destroyBuffer();
 }

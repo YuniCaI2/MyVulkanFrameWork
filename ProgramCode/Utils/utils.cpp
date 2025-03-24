@@ -5,6 +5,10 @@
 #include "utils.h"
 #include <stdexcept>
 #include <fstream>
+#include <tiny_gltf.h>
+#include <opencv2/opencv.hpp>  // 包含 OpenCV，用于加载 OBJ 模型的纹理图像
+
+#include "../Instance/Buffer.h"
 
 VkImageView Utils::createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
                                    uint32_t mipLevels, uint32_t arrayNum) {
@@ -190,17 +194,24 @@ void Utils::transitionImageLayout(const VK::Device &device, const VkCommandPool 
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;//为了CUBEMAP
-    }else if (
+        destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT; //为了CUBEMAP
+    } else if (
         oldLayout == VK_IMAGE_LAYOUT_GENERAL &&
         newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     ) {
-        barrier.srcAccessMask = 0 ;
+        barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;//为了CUBEMAP
-    }
-    else {
+        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; //为了CUBEMAP
+    } else if (
+        oldLayout == VK_IMAGE_LAYOUT_GENERAL &&
+        newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    ) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT; //为了CUBEMAP
+    } else {
         throw std::runtime_error("Unsupported layout transition");
     }
 
@@ -237,4 +248,121 @@ VkSampleCountFlagBits Utils::getMaxUsableSampleCount(const VkPhysicalDevice &phy
     if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
     return VK_SAMPLE_COUNT_1_BIT;
+}
+
+void Utils::generateMipmaps(VK::Instances::Image image, const VK::Device &device, VkCommandPool commandPool,
+                            VkImageLayout imageLayout) {
+    VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
+
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.image = image.image;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = image.arrayNum;
+    barrier.subresourceRange.levelCount = 1;
+
+
+    int32_t mipWidth = image.width;
+    int32_t mipHeight = image.height;
+
+    for (auto i = 1; i < image.mipmapLevels; i++) {
+        barrier.subresourceRange.baseMipLevel = i - 1;
+        barrier.oldLayout = imageLayout;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        if (imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        } else {
+            throw std::runtime_error("Unsupported layout transition");
+        }
+
+        VkImageBlit blit = {};
+        blit.srcOffsets[0] = {0, 0, 0};
+        blit.srcOffsets[1] = {mipWidth, mipHeight, 1}; //源mipmap的尺寸
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.mipLevel = i - 1;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = image.arrayNum;
+        blit.dstOffsets[0] = {0, 0, 0};
+        blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.mipLevel = i;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = image.arrayNum;
+
+        vkCmdBlitImage(commandBuffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.image,
+                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+                             nullptr, 0, nullptr, 1, &barrier);
+
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
+    }
+    barrier.subresourceRange.baseMipLevel = image.mipmapLevels - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+                         nullptr, 0, nullptr, 1, &barrier);
+
+    endSingleTimeCommands(device, commandPool, commandBuffer);
+}
+
+
+void Utils::LoadSingleImage(VK::Instances::Image &image, const std::string &PATH, const VK::Device &device,
+                            VkCommandPool commandPool, uint32_t mipmapLevel) {
+    //不支持加载复合图片
+    cv::Mat cvImage = cv::imread(PATH);
+    cvtColor(cvImage, cvImage, cv::COLOR_BGRA2RGBA);
+    if (cvImage.empty()) {
+        throw std::runtime_error("Failed to load image");
+    }
+    if (cvImage.channels() == 4) {
+        VkDeviceSize imageSize = cvImage.cols * cvImage.rows * 4;
+        auto *imageData = reinterpret_cast<uint8_t *>(cvImage.data);
+
+        VK::Instances::Buffer stagingBuffer;
+        stagingBuffer.createBuffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        stagingBuffer.Map(); // 映射内存
+        memcpy(stagingBuffer.data, imageData, static_cast<size_t>(imageSize)); // 复制图像数据
+        stagingBuffer.UnMap(); // 取消映射
+
+        image.createImage(device, cvImage.cols, cvImage.rows, mipmapLevel, 1,
+                          VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
+                          VK_IMAGE_TILING_OPTIMAL,
+                          VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        Utils::transitionImageLayout(device, commandPool, image.image,
+                                     VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 1); // 转换图像布局为传输目标
+        image.copy(stagingBuffer.buffer, commandPool); // 复制数据到图像
+        if (mipmapLevel > 1) {
+            Utils::generateMipmaps(image, device, commandPool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            image.imageView = Utils::createImageView(device.vkDevice, image.image,
+                                                     VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipmapLevel,
+                                                     1); // 创建图像视图
+        } else {
+            Utils::transitionImageLayout(device, commandPool, image.image,
+                                         VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, 1); // 转换图像布局为着色器可读
+            image.imageView = Utils::createImageView(device.vkDevice, image.image,
+                                                     VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1, 1); // 创建图像视图
+        }
+        stagingBuffer.destroyBuffer(); // 销毁暂存缓冲区
+    }
 }

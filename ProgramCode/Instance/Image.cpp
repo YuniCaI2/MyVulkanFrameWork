@@ -108,6 +108,7 @@ void VK::Instances::Image::createImage(const VK::Device &device, uint32_t width,
     this->device = device;
     this->arrayNum = arrayNum;
     this->format = format;
+    this->mipmapLevels = mipLevels;
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
