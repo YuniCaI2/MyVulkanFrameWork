@@ -44,6 +44,7 @@ const bool constexpr enableValidationLayers = true;
 // #define MODEL_PATH "/Users/yunicai/Model/blue-archive-sunohara-kokona/cocona.obj"
 #define MODEL_PATH "/Users/yunicai/Model/DamagedHelmet.gltf"
 #define CUBEMAP_PATH "/Users/yunicai/Model/cubemap1.exr"
+#define LUT_PATH "/Users/yunicai/Code_file/code/LearnVulkan/MyVulkanFrameWork/LUT/ibl_brdf_lut.png"
 #endif
 
 enum class RenderType {

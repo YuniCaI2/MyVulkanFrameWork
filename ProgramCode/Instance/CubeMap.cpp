@@ -51,6 +51,7 @@ void VK::Instances::CubeMap::LoadEXRRawImage(const VK::Device &device, const VkC
                                              const std::string &Path) {
     Buffer rawImageData{};
     cv::Mat image = cv::imread(Path, cv::IMREAD_UNCHANGED);
+    cv::cvtColor(image,image, cv::COLOR_BGRA2RGBA);
     rawImageSize.x = image.cols;
     rawImageSize.y = image.rows;
     std::cout << "Image depth:" << image.depth() << std::endl;
