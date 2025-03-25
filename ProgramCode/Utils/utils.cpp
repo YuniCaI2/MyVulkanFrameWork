@@ -326,7 +326,13 @@ void Utils::LoadSingleImage(VK::Instances::Image &image, const std::string &PATH
                             VkCommandPool commandPool, uint32_t mipmapLevel) {
     //不支持加载复合图片
     cv::Mat cvImage = cv::imread(PATH);
-    cvtColor(cvImage, cvImage, cv::COLOR_BGRA2RGBA);
+    std::cout << " clannel:"<< cvImage.channels() << std::endl;
+    if (cvImage.channels() == 3) {
+        cvtColor(cvImage, cvImage, cv::COLOR_BGR2RGBA);
+    }
+    if (cvImage.channels() == 4) {
+        cvtColor(cvImage, cvImage, cv::COLOR_BGRA2RGBA);
+    }
     if (cvImage.empty()) {
         throw std::runtime_error("Failed to load image");
     }

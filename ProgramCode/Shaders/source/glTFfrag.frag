@@ -157,7 +157,7 @@ void main() {
     vec3 diffuse = (1 - metallic ) * irradiance * albedo;
 
     //Spec
-    float lod = roughness * 5;
+    float lod = roughness * maxMipLevel;
     vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
     vec3 prefilteredCoolor = hdrTosdr(textureLod(cubeMap, reflect(N,V), lod).rgb);
     vec2 envBRDF = vec2(linearToSrgb(texture(LUT, vec2(dot(N, V), roughness)).r),linearToSrgb(texture(LUT, vec2(dot(N, V), roughness)).g));
