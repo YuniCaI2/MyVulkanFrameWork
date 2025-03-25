@@ -34,8 +34,8 @@ layout(std140, set = 0, binding = 0) uniform UBO {
 vec3 hdrTosdr(vec3 envColor){
     // HDR -> LDR
     envColor = envColor / (envColor + vec3(1.0));
-    // Gamma校正（只在颜色为线性空间的渲染管线才需要）
-    envColor = pow(envColor, vec3(1.0/2.2));
+//    // Gamma校正（只在颜色为线性空间的渲染管线才需要）
+//    envColor = pow(envColor, vec3(1.0/2.2));
 
     return envColor;
 }
@@ -157,10 +157,11 @@ void main() {
     vec3 diffuse = (1 - metallic ) * irradiance * albedo;
 
     //Spec
-    float lod = roughness * maxMipLevel;
+    float lod = roughness * 5;
     vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
     vec3 prefilteredCoolor = hdrTosdr(textureLod(cubeMap, reflect(N,V), lod).rgb);
     vec2 envBRDF = vec2(linearToSrgb(texture(LUT, vec2(dot(N, V), roughness)).r),linearToSrgb(texture(LUT, vec2(dot(N, V), roughness)).g));
+//    vec2 envBRDF = vec2(texture(LUT, vec2(0.5, 0.5)).r,texture(LUT, vec2(0.5, 0.5)).g);
     vec3 indirectSpec = prefilteredCoolor * (F * envBRDF.x + envBRDF.y);
     vec3 ambient = (kD * diffuse + indirectSpec) * ao;
 
@@ -193,4 +194,5 @@ void main() {
     vec3 color = ambient + emissive + Lo;
 
     outColor = vec4(color, 1.0);
+//    outColor = vec4(envBRDF, 0.0,1.0);
 }
